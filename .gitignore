@@ -1,0 +1,5 @@
+.env
+open_deep_research.egg-info
+.venv
+.langgraph_api
+__pycache__
