@@ -24,7 +24,7 @@ Call the Queries tool
 </Format>
 """
 
-report_planner_instructions="""You are tasked with creating a clear and logical structure for a research report.
+report_planner_instructions="""I want a plan for a report that is concise and focused.
 
 <Report topic>
 The topic of the report is:
@@ -42,21 +42,29 @@ Here is context to use to plan the sections of the report:
 </Context>
 
 <Task>
-Generate a concise and well-structured list of sections for the report. Each section should serve a distinct purpose and contribute to the overall narrative of the report. Avoid redundancy and ensure logical flow.
+Generate a list of sections for the report. Your plan should be tight and focused with NO overlapping sections or unnecessary filler. 
 
-For each section, provide the following fields:
-- Name: A clear and descriptive name for the section.
-- Description: A brief overview of the main topics covered in this section.
-- Research: Indicate whether web research is required for this section.
-- Content: Leave this field blank for now.
+For example, a good report structure might look like:
+1/ intro
+2/ overview of topic A
+3/ overview of topic B
+4/ comparison between A and B
+5/ conclusion
 
-Guidelines:
-1. Integrate examples and implementation details within relevant sections rather than creating separate sections for them.
-2. Ensure each section has a unique focus and avoid overlapping content.
-3. Combine related concepts into cohesive sections to maintain clarity and brevity.
-4. Follow a logical progression, starting with an introduction, covering the main topics, and ending with a conclusion.
+Each section should have the fields:
 
-Before finalizing, review the structure to ensure it is tight, focused, and free of unnecessary filler.
+- Name - Name for this section of the report.
+- Description - Brief overview of the main topics covered in this section.
+- Research - Whether to perform web research for this section of the report.
+- Content - The content of the section, which you will leave blank for now.
+
+Integration guidelines:
+- Include examples and implementation details within main topic sections, not as separate sections
+- Ensure each section has a distinct purpose with no content overlap
+- Combine related concepts rather than separating them
+
+Before submitting, review your structure to ensure it has no redundant sections and follows a logical flow.
+</Task>
 
 <Feedback>
 Here is feedback on the report structure from review (if any):
@@ -107,9 +115,9 @@ section_writer_instructions = """Write one section of a research report.
 <Writing Guidelines>
 - If existing section content is not populated, write from scratch
 - If existing section content is populated, synthesize it with the source material
-- Strict 300-500 word limit
+- Strict 150-200 word limit
 - Use simple, clear language
-- Use Comprehensive detailing in each paragraphs
+- Use short paragraphs (2-3 sentences max)
 - Use ## for section title (Markdown format)
 </Writing Guidelines>
 
@@ -213,15 +221,6 @@ For Introduction:
 - Include NO structural elements (no lists or tables)
 - No sources section needed
 
-For Main Body:
-- Use ## for section title (Markdown format)
-- 300-500 word limit
-- Use simple, clear language
-- Use Comprehensive detailing in each paragraphs
-- Use proper Markdown syntax for section titles
-- **Do NOT include sources in this section**
-
-
 For Conclusion/Summary:
 - Use ## for section title (Markdown format)
 - 200-450 word limit
@@ -243,18 +242,6 @@ For Conclusion/Summary:
 - Use concrete details over general statements
 - Make every word count
 - Focus on your single most important point
-
-4. Sources Placement:
-- Each section has its own sources, give them a unique number in the final list. Use these numbers in the report body as citations
-
-- Use the format:
-    ```
-    [1] Source Title: URL  
-    [2] Source Title: URL  
-    [3] Source Title: URL  
-    ```
-- Ensure the correct citation number for each reference in the report body, but do not list them after individual sections.
-
 </Task>
 
 <Quality Checks>
@@ -264,10 +251,3 @@ For Conclusion/Summary:
 - Do not include word count or any preamble in your response
 - Include all relevant sources ONLY at the end of the report
 </Quality Checks>"""
-
-
-final_report_writer_input="""
-<compiled report content>
-{compiled_report_content}
-</compiled report content>
-"""

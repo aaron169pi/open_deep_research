@@ -7,21 +7,17 @@ from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
 from dataclasses import dataclass
 
-DEFAULT_REPORT_STRUCTURE = """Use this structure to create a comprehensive and well-organized report on the user-provided topic:
+DEFAULT_REPORT_STRUCTURE = """Use this structure to create a report on the user-provided topic:
 
-1. Introduction (no external research required)
-    - Provide a brief overview of the topic
-    - Highlight the importance or relevance of the topic
+1. Introduction (no research needed)
+   - Brief overview of the topic area
 
 2. Main Body Sections:
-    - Divide the topic into logical sub-topics or themes
-    - Provide detailed explanations, supported by examples or data where applicable
-    - Ensure smooth transitions between sections for better readability
-
-3. Conclusion:
-    - Summarize the key points discussed in the main body
-    - Include one structural element (e.g., a table or list) to distill the main findings
-    - Provide a concise and insightful summary of the report's overall message"""
+   - Each section should focus on a sub-topic of the user-provided topic
+   
+3. Conclusion
+   - Aim for 1 structural element (either a list of table) that distills the main body sections 
+   - Provide a concise summary of the report"""
 
 class SearchAPI(Enum):
     PERPLEXITY = "perplexity"
@@ -37,7 +33,7 @@ class SearchAPI(Enum):
 class Configuration:
     """The configurable fields for the chatbot."""
     report_structure: str = DEFAULT_REPORT_STRUCTURE # Defaults to the default report structure
-    number_of_queries: int = 3 # Number of search queries to generate per iteration
+    number_of_queries: int = 2 # Number of search queries to generate per iteration
     max_search_depth: int = 2 # Maximum number of reflection + search iterations
     planner_provider: str = "google_genai"  # Defaults to Anthropic as provider
     planner_model: str = "gemini-2.5-pro-exp-03-25" # Defaults to claude-3-7-sonnet-latest

@@ -26,8 +26,7 @@ from open_deep_research.prompts import (
     section_writer_instructions,
     final_section_writer_instructions,
     section_grader_instructions,
-    section_writer_inputs,
-    final_report_writer_input
+    section_writer_inputs
 )
 
 from open_deep_research.configuration import Configuration
@@ -409,7 +408,7 @@ def gather_completed_sections(state: ReportState):
 
     return {"report_sections_from_research": completed_report_sections}
 
-def compile_final_report(state: ReportState, config: RunnableConfig):
+def compile_final_report(state: ReportState):
     """Compile all sections into the final report.
     
     This node:
@@ -434,36 +433,8 @@ def compile_final_report(state: ReportState, config: RunnableConfig):
 
     # Compile final report
     all_sections = "\n\n".join([s.content for s in sections])
-    print("before restructure:",all_sections)
 
-    # Use an LLM to structure the final report and move sources to the end
-    configurable = Configuration.from_runnable_config(config)
-    writer_provider = get_config_value(configurable.writer_provider)
-    writer_model_name = get_config_value(configurable.writer_model)
-    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider)
-
-    # Format system instructions
-    system_instructions = (
-        "You are tasked with restructuring a report. The report contains sections with sources listed after each section. "
-        "Your job is to recompile the report by moving all sources to the end of the document under a 'References' section. "
-        "Ensure proper numbering and citation format for the sources."
-    )
-
-    # Generate the restructured report
-    final_section_writer_instructions = final_report_writer_input.format(compiled_report_content=all_sections)
-
-    # Generate the restructured report
-    restructured_report = writer_model.invoke([
-        SystemMessage(content=system_instructions),
-        HumanMessage(content=final_section_writer_instructions)
-    ])
-
-    # Extract the restructured report content
-    compiled_sections = restructured_report.content
-    print("after restructure:",compiled_sections)
-
-    return {"final_report": compiled_sections}
-
+    return {"final_report": all_sections}
 
 def initiate_final_section_writing(state: ReportState):
     """Create parallel tasks for writing non-research sections.
