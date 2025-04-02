@@ -436,6 +436,7 @@ def compile_final_report(state: ReportState, config: RunnableConfig):
 
     # Compile final report
     all_sections = "\n\n".join([s.content for s in sections])
+    print("before restructure:",all_sections)
 
     # Use an LLM to structure the final report and move sources to the end
     configurable = Configuration.from_runnable_config(config)

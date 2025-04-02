@@ -13,7 +13,7 @@ DEFAULT_REPORT_STRUCTURE = """Use this structure to create a comprehensive and w
     - Provide a brief overview of the topic
     - Highlight the importance or relevance of the topic
 
-2. Main Body Sections: (external research required)
+2. Main Body Sections: (external research required))
     - Divide the topic into logical sub-topics or themes
     - Provide detailed explanations, supported by examples or data where applicable
     - Ensure smooth transitions between sections for better readability

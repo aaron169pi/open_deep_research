@@ -49,7 +49,11 @@ For example, a good report structure might look like:
 - Minimum of 7-8 sections covering the broader aspects of the topic, each divided into logical sub-topics or themes
 - Conclusion/Summary
 
-Each section should have the fields:
+Guidelines:
+1. Integrate examples and implementation details within relevant sections rather than creating separate sections for them.
+2. Ensure each section has a unique focus and avoid overlapping content.
+3. Combine related concepts into cohesive sections to maintain clarity and brevity.
+4. Follow a logical progression, starting with an introduction, covering the main topics, and ending with a conclusion.
 
 - Name - Name for this section of the report.
 - Description - Detailed overview of the main topics covered in this section.
@@ -223,6 +227,15 @@ For Introduction:
 - Include NO structural elements (no lists or tables)
 - No sources section needed
 
+For Main Body:
+- Use ## for section title (Markdown format)
+- 300-500 word limit
+- Use simple, clear language
+- Use Comprehensive detailing in each paragraphs
+- Use proper Markdown syntax for section titles
+- **Do NOT include sources in this section**
+
+
 For Conclusion/Summary:
 - Use ## for section title (Markdown format)
 - 200-450 word limit
@@ -244,6 +257,18 @@ For Conclusion/Summary:
 - Use concrete details over general statements
 - Make every word count
 - Focus on your single most important point
+
+4. Sources Placement:
+- Each section has its own sources, give them a unique number in the final list. Use these numbers in the report body as citations
+
+- Use the format:
+    ```
+    [1] Source Title: URL  
+    [2] Source Title: URL  
+    [3] Source Title: URL  
+    ```
+- Ensure the correct citation number for each reference in the report body, but do not list them after individual sections.
+
 </Task>
 
 <Quality Checks>
