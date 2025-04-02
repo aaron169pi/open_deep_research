@@ -24,7 +24,7 @@ Call the Queries tool
 </Format>
 """
 
-report_planner_instructions="""I want a plan for a report that is concise and focused.
+report_planner_instructions="""I want a detailed plan for a report that focuses on the broader picture of the research topic.
 
 <Report topic>
 The topic of the report is:
@@ -42,33 +42,34 @@ Here is context to use to plan the sections of the report:
 </Context>
 
 <Task>
-Generate a list of sections for the report. Your plan should be tight and focused with NO overlapping sections or unnecessary filler. 
+Generate a comprehensive list of sections for the report. Your plan should provide a broad overview of the topic while ensuring depth in each section.
 
 For example, a good report structure might look like:
-1/ intro
-2/ overview of topic A
-3/ overview of topic B
-4/ comparison between A and B
-5/ conclusion
+- Introduction
+- Minimum of 7-8 sections covering the broader aspects of the topic, each divided into logical sub-topics or themes
+- Conclusion/Summary
 
 Each section should have the fields:
 
 - Name - Name for this section of the report.
-- Description - Brief overview of the main topics covered in this section.
+- Description - Detailed overview of the main topics covered in this section.
 - Research - Whether to perform web research for this section of the report.
 - Content - The content of the section, which you will leave blank for now.
 
 Integration guidelines:
-- Include examples and implementation details within main topic sections, not as separate sections
-- Ensure each section has a distinct purpose with no content overlap
-- Combine related concepts rather than separating them
+- Ensure sections cover the broader aspects of the topic while maintaining logical flow and coherence
+- Avoid redundancy and ensure each section has a distinct purpose
+- Combine related concepts into cohesive sections to provide a holistic view
 
-Before submitting, review your structure to ensure it has no redundant sections and follows a logical flow.
+Before submitting, review your structure to ensure it provides a comprehensive and logical overview of the topic.
 </Task>
 
 <Feedback>
 Here is feedback on the report structure from review (if any):
 {feedback}
+
+Guidelines:
+- If feedback demands newer sections, create more sections as required
 </Feedback>
 
 <Format>
@@ -115,9 +116,10 @@ section_writer_instructions = """Write one section of a research report.
 <Writing Guidelines>
 - If existing section content is not populated, write from scratch
 - If existing section content is populated, synthesize it with the source material
-- Strict 150-200 word limit
+- include atleast 3 paragraphs
+- Strict 200-300 word limit per paragraph
 - Use simple, clear language
-- Use short paragraphs (2-3 sentences max)
+- Use comprehensive detailing for each paragraph
 - Use ## for section title (Markdown format)
 </Writing Guidelines>
 
@@ -126,8 +128,8 @@ section_writer_instructions = """Write one section of a research report.
 - End with ### Sources that lists each source with corresponding numbers
 - IMPORTANT: Number sources sequentially without gaps (1,2,3,4...) in the final list regardless of which sources you choose
 - Example format:
-  [1] Source Title: URL
-  [2] Source Title: URL
+  [1] Source Title: URL \n
+  [2] Source Title: URL \n
 </Citation Rules>
 
 <Final Check>
@@ -251,3 +253,9 @@ For Conclusion/Summary:
 - Do not include word count or any preamble in your response
 - Include all relevant sources ONLY at the end of the report
 </Quality Checks>"""
+
+final_report_writer_input="""
+<compiled report content>
+{compiled_report_content}
+</compiled report content>
+"""

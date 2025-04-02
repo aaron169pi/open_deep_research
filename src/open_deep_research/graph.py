@@ -26,7 +26,8 @@ from open_deep_research.prompts import (
     section_writer_instructions,
     final_section_writer_instructions,
     section_grader_instructions,
-    section_writer_inputs
+    section_writer_inputs,
+    final_report_writer_input
 )
 
 from open_deep_research.configuration import Configuration
@@ -100,7 +101,9 @@ async def generate_report_plan(state: ReportState, config: RunnableConfig):
 
     # Report planner instructions
     planner_message = """Generate the sections of the report. Your response must include a 'sections' field containing a list of sections. 
-                        Each section must have: name, description, plan, research, and content fields."""
+    Each section must have: name, description, plan, research, and content fields.
+    Kindly generate at least 7-8 sections 
+    """
 
     # Run the planner
     if planner_model == "claude-3-7-sonnet-latest":
@@ -408,7 +411,7 @@ def gather_completed_sections(state: ReportState):
 
     return {"report_sections_from_research": completed_report_sections}
 
-def compile_final_report(state: ReportState):
+def compile_final_report(state: ReportState, config: RunnableConfig):
     """Compile all sections into the final report.
     
     This node:
@@ -434,7 +437,36 @@ def compile_final_report(state: ReportState):
     # Compile final report
     all_sections = "\n\n".join([s.content for s in sections])
 
-    return {"final_report": all_sections}
+    # Use an LLM to structure the final report and move sources to the end
+    configurable = Configuration.from_runnable_config(config)
+    writer_provider = get_config_value(configurable.writer_provider)
+    writer_model_name = get_config_value(configurable.writer_model)
+    writer_model = init_chat_model(model=writer_model_name, model_provider=writer_provider)
+
+    # Format system instructions
+    system_instructions = (
+        "You are tasked with restructuring a report. The report contains sections with sources listed after each section. "
+        "Your job is to recompile the report by moving all sources to the end of the document under a 'References' section. "
+        """Ensure proper numbering and citation format for the sources. (Ensure each new source is on a newline)
+- Example format:
+[1] Source Title: URL \n
+[2] Source Title: URL \n
+        """
+        "Only give the report itself, don't add any preambles"
+    )
+
+    final_section_writer_instructions = final_report_writer_input.format(compiled_report_content=all_sections)
+
+    # Generate the restructured report
+    restructured_report = writer_model.invoke([
+        SystemMessage(content=system_instructions),
+        HumanMessage(content=final_section_writer_instructions)
+    ])
+
+    # Extract the restructured report content
+    compiled_sections = restructured_report.content
+
+    return {"final_report": compiled_sections}
 
 def initiate_final_section_writing(state: ReportState):
     """Create parallel tasks for writing non-research sections.
