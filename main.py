@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import List
 from langchain_anthropic import ChatAnthropic
 from langchain_deepseek import ChatDeepSeek
+import winsound #remove in production
 
 # Define the structure for file responses
 class FileResponse(BaseModel):
@@ -56,7 +57,7 @@ def process_app_idea(idea: str):
          response_format=FileResponseList
       )
       response = code_agent.invoke({"messages": [{"role": "user", "content": f"user idea:\n {idea}\n\n plan: \n{plan}"}]})
-      raw_code = response['messages'][1].content
+      raw_code = response['messages'][-1].content
 
       print(f"Raw Code: \n\n{raw_code}\n\n")
 
@@ -67,7 +68,15 @@ def process_app_idea(idea: str):
          response_format=FileResponseList
       )
       validated_code = validation_agent.invoke({"messages": [{"role": "user", "content": raw_code}]})
-      code_data = json.loads(validated_code['messages'][1].content)
+      try:
+         code_data = json.loads(validated_code['messages'][-1].content)
+      except json.JSONDecodeError as e:
+         print(f"JSON decoding error: {e}")
+         code_data = None
+         return 1 #exits when there's a problem 
+      except Exception as e:
+         print(f"Unexpected error: {e}, code was: {validated_code['messages']}")
+         code_data = None
 
       print(f"Code Data: \n\n{code_data}\n\n")
 
@@ -79,6 +88,7 @@ def process_app_idea(idea: str):
       code_data = state_manager.get_codebase()
 
    while True:
+      winsound.Beep(500, 500) #remove in production
       user_input = input("\n>>> Enter additional request for your project (or type 'exit'): ").strip()
       if user_input.lower() in {"exit", "quit"}:
          print("Exiting loop.")
@@ -103,7 +113,7 @@ def process_app_idea(idea: str):
          response_format=FileResponseList
       )
       response = code_agent.invoke({"messages": [{"role": "user", "content": user_input}]})
-      raw_code = response['messages'][1].content
+      raw_code = response['messages'][-1].content
 
       print(f"Raw Code: \n\n{raw_code}\n\n")
 
@@ -114,7 +124,15 @@ def process_app_idea(idea: str):
          response_format=FileResponseList
       )
       validated_update_code = validation_agent.invoke({"messages": [{"role": "user", "content": raw_code}]})
-      updated_code_data = json.loads(validated_update_code['messages'][1].content)
+      try:
+         updated_code_data = json.loads(validated_update_code['messages'][-1].content)
+      except json.JSONDecodeError as e:
+         print(f"JSON decoding error: {e}")
+         updated_code_data = None
+         return 1 #exits when there's a problem 
+      except Exception as e:
+         print(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
+         updated_code_data = None
 
       # Update the codebase with new changes
       existing_files = {file["file_path"]: file for file in code_data}
@@ -136,5 +154,5 @@ def process_app_idea(idea: str):
 
 
 # if __name__ == "__main__":
-idea = "I want to build a streamlit app for unit conversions, ONLY STREAMLIT"
+idea = "I want to build a unit conversion app using streamlit, for things like weight currency, etc. include at least 15 conversions"
 process_app_idea(idea)
