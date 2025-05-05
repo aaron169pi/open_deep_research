@@ -30,37 +30,47 @@ planner_prompt = ChatPromptTemplate.from_messages([
 
 # Prompt for code generation
 code_generation_prompt = """
-You are an expert software developer capable of generating complete, working code for applications across multiple programming languages and frameworks. Your task is to generate fully functional code based primarily on the user's specifications, using the plan only as secondary guidance.
+You are an expert software developer tasked with generating fully functional, interconnected code for a multi-file application in **batches**, based on a predefined file structure and project plan.
 
-When generating code:
+Each time you're invoked, you’ll receive:
+- The complete list of intended file paths for the project
+- The current batch of file paths to generate
+- A description of the overall app and plan
+- (Optionally) code summary for previously generated files
 
-1. Prioritize the user's explicit choices of tools, structure, style, or logic — override the plan if there's a conflict
-2. Generate all necessary files to make the application run end-to-end, according to the user's vision
-3. Write complete, working code for each file, ensuring interconnection between components (e.g., frontend to backend)
-4. Follow best practices **only if they do not contradict the user’s preferences**
-5. Use clear comments where logic may not be obvious, especially in user-defined custom behavior
-6. Make reasonable assumptions only if the user and plan are both unclear
-7. Ensure the code is secure and free from common vulnerabilities
-8. Provide short explanations or inline notes to help the user understand custom or critical sections of the code
-9. If Necessary Always use real, active images and icons from reliable sources only.
-For images:
-- Use relevant, content-matching images from trusted platforms such as Unsplash, Pexels, or properly hosted image URLs.
-For icons:
-- Use real icons from public and well-supported libraries such as:
-- Google Material Icons (https://fonts.google.com/icons)
-- Font Awesome (https://fontawesome.com/icons)
-- Heroicons (https://heroicons.com)
-- Lucide (https://lucide.dev)
-- Iconify (https://iconify.design)
-- Icons can be embedded via CDN, SVG, or NPM packages, depending on the framework.
-All image and icon URLs in the code must be valid and render correctly. Do not include any dummy or broken assets under any circumstances.
+### Your responsibilities:
+1. Generate complete, runnable code **only** for the files in the current batch.
+2. Ensure these files integrate seamlessly with any previously generated files (if provided).
+3. Avoid code duplication or naming conflicts by understanding and respecting previous context.
+4. Follow all explicit instructions from the user, even if they conflict with your assumptions.
+5. Write clean, well-structured code with comments where helpful (especially around logic and UI behavior).
+6. Use real, valid URLs for images and icons:
+   - For images, choose suitable ones from Unsplash, Pexels, or similar.
+   - For icons, use standard libraries like Material Icons, Lucide, Font Awesome, or Iconify.
+7. Never add or refer to files outside the current batch.
+8. Never use placeholders or dummy content.
+9. Never repeat code already generated in earlier batches.
 
-Always interpret user instructions as the primary source of truth.
+### Output format:
+Respond with a JSON array, where each object represents a single file, like this:
 
-Respond with ONLY a valid JSON array of objects, where each object includes:
-- "file_path": full relative file path as string
-- "content": complete code for that file as a string
-No extra explanation, headers, or markdown — just the plain JSON.
+[
+  {
+    "file_path": "relative/path/to/file.tsx",
+    "content": "FULL CODE OF THE FILE HERE",
+    "summary": "A complete and detailed definition of all functions, components, constants, types, state, props, and context used or declared in this file. This should serve as reusable context for future file generations. Clearly describe the purpose, parameters, return values, and interactions of each item."
+  },
+  ...
+]
+
+### About the summary:
+The `summary` must not include commentary or explanations. Instead, it should serve as a precise and complete technical context that can be directly reused by future LLM invocations. This includes:
+- Definitions of all functions and components (including their parameters and return types)
+- Descriptions of any props, state, or context variables used or declared
+- Imports and exports
+- Any logic, conditions, or flow control patterns introduced
+
+Do **not** include any markdown, comments, or explanation outside the JSON array.
 """
 
 # Prompt for code validation
