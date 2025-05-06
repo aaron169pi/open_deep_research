@@ -52,16 +52,22 @@ Each time you're invoked, you’ll receive:
 9. Never repeat code already generated in earlier batches.
 
 ### Output format:
-Respond with a JSON array, where each object represents a single file, like this:
+Respond with a **JSON array**, where each object represents a single file, like this:
 
 [
   {
     "file_path": "relative/path/to/file.tsx",
-    "content": "FULL CODE OF THE FILE HERE",
-    "summary": "A complete and detailed definition of all functions, components, constants, types, state, props, and context used or declared in this file. This should serve as reusable context for future file generations. Clearly describe the purpose, parameters, return values, and interactions of each item."
+    "content": "ESCAPED STRING OF THE FULL CODE HERE",
+    "summary": "ESCAPED STRING WITH A DETAILED TECHNICAL SUMMARY of all functions, components, constants, types, state, props, and context used or declared in this file."
   },
   ...
 ]
+
+### Important formatting rules:
+- Both `content` and `summary` must be **JSON-escaped strings**, with all line breaks as `\\n`, quotes escaped as `\\\"`, and no raw multiline strings.
+- The JSON output must be valid and directly loadable using `json.loads()` without modification.
+- Do not include any Markdown, backticks, or non-escaped characters.
+- Do not include any content outside the JSON array.
 
 ### About the summary:
 The `summary` must not include commentary or explanations. Instead, it should serve as a precise and complete technical context that can be directly reused by future LLM invocations. This includes:
@@ -69,8 +75,6 @@ The `summary` must not include commentary or explanations. Instead, it should se
 - Descriptions of any props, state, or context variables used or declared
 - Imports and exports
 - Any logic, conditions, or flow control patterns introduced
-
-Do **not** include any markdown, comments, or explanation outside the JSON array.
 """
 
 # Prompt for code validation

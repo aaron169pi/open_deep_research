@@ -37,6 +37,9 @@ def init_models():
 
    return planner_model, code_model, structure_model
 
+def print_error(str):
+   print('\033[91m' + str + '\033[0m')
+
 def batch_files(file_paths, batch_size):
     for i in range(0, len(file_paths), batch_size):
         yield file_paths[i:i + batch_size]
@@ -86,7 +89,7 @@ def process_app_idea(idea: str):
             raw = structure_response['messages'][-1].content
             file_paths = json.loads(raw.strip().strip("```json").strip("```").strip())
          except Exception as e:
-            print(f"Structure parse error: {e}, raw response: {structure_response['messages'][-1].content}")
+            print_error(f"Structure parse error: {e}, raw response: {structure_response['messages'][-1].content}")
             return 1
 
       generated_code = []
@@ -113,28 +116,29 @@ def process_app_idea(idea: str):
                batch_code = json.loads(raw.strip().strip("```json").strip("```").strip())
                generated_code.extend(batch_code)
             except Exception as e:
-               print(f"Batch parse error: {e}, response: {response['messages'][-1].content}")
+               print_error(f"Batch parse error: {e}, response: {response['messages'][-1].content}")
          summary.append([ {key: value for key, value in item.items() if key != "content"} for item in batch_code])
 
       print(f"Generated Code: \n\n{generated_code}")
 
-      validation_agent = create_react_agent(
-         model=code_model,
-         tools=[],
-         prompt=code_validation_prompt,
-         response_format=FileResponseList
-      )
-      for i, file in enumerate(generated_code):
-         validated_update_code = validation_agent.invoke({"messages": [{"role": "user", "content": file}]})
-         try:
-            updated_code_data = json.loads(validated_update_code['messages'][-1].content)
-            generated_code[i]['content'] = updated_code_data
-         except json.JSONDecodeError as e:
-            print(f"JSON decoding error: {e}")
-            updated_code_data = None
-         except Exception as e:
-            print(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
-            updated_code_data = None
+      # validation_agent = create_react_agent(
+      #    model=code_model,
+      #    tools=[],
+      #    prompt=code_validation_prompt,
+      #    response_format=FileResponseList
+      # )
+      # for i, file in enumerate(generated_code):
+      #    validated_update_code = validation_agent.invoke({"messages": [{"role": "user", "content": str(file)}]})
+      #    try:
+      #       updated_code_data = json.loads(validated_update_code['messages'][-1].content)
+      #       print(f"updated_code_data")
+      #       generated_code[i]['content'] = updated_code_data
+      #    except json.JSONDecodeError as e:
+      #       print_error(f"JSON decoding error: {e}")
+      #       updated_code_data = None
+      #    except Exception as e:
+      #       print_error(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
+      #       updated_code_data = None
 
 
       save_files(generated_code, base_dir)
@@ -184,11 +188,11 @@ def process_app_idea(idea: str):
       try:
          updated_code_data = json.loads(validated_update_code['messages'][-1].content)
       except json.JSONDecodeError as e:
-         print(f"JSON decoding error: {e}")
+         print_error(f"JSON decoding error: {e}")
          updated_code_data = None
          return 1 #exits when there's a problem 
       except Exception as e:
-         print(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
+         print_error(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
          updated_code_data = None
 
       # Update the codebase with new changes
@@ -211,5 +215,5 @@ def process_app_idea(idea: str):
 
 
 # if __name__ == "__main__":
-idea = "I want to build a unit conversion app using react, for things like weight currency, etc. include at least 15 conversions"
+idea = "I want to build a Customer relation management app(CRM) using react for my company called 169pi"
 process_app_idea(idea)
