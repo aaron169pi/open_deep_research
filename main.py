@@ -8,6 +8,7 @@ from pydantic import BaseModel
 from typing import List
 from langchain_anthropic import ChatAnthropic
 from langchain_deepseek import ChatDeepSeek
+import re
 import winsound #remove in production
 
 # Define the structure for file responses
@@ -26,6 +27,14 @@ def init_models():
       model="deepseek-chat",
       max_tokens=8000
    )
+   # code_model = ChatDeepSeek(
+   #    model="deepseek-chat",
+   #    max_tokens=8000
+   # )
+   # structure_model = ChatDeepSeek(
+   #    model="deepseek-chat",
+   #    max_tokens=8000
+   # )
    code_model = ChatAnthropic(
       model="claude-3-7-sonnet-20250219",
       max_tokens=15000
@@ -53,8 +62,8 @@ def process_app_idea(idea: str):
       plan_response = planner_model.invoke(planner_prompt.format(idea=idea))
       plan = plan_response.content
       state_manager.update_plan(plan)
-   else:
-      plan = state_manager.get_plan()
+
+   plan = state_manager.get_plan()
 
    print(f"\nProject Plan:\n{plan}\n")
 
@@ -113,8 +122,14 @@ def process_app_idea(idea: str):
          except Exception as e:
             try:
                raw = response['messages'][-1].content
-               batch_code = json.loads(raw.strip().strip("```json").strip("```").strip())
-               generated_code.extend(batch_code)
+
+               match = re.search(r"\[\s*{.*?}\s*\]", raw, re.DOTALL)
+               if match:
+                  array_str = match.group(0)
+                  batch_code = json.loads(array_str)
+                  generated_code.extend(batch_code)
+               else:
+                  print_error("No JSON array found in the response.")
             except Exception as e:
                print_error(f"Batch parse error: {e}, response: {response['messages'][-1].content}")
          summary.append([ {key: value for key, value in item.items() if key != "content"} for item in batch_code])
@@ -145,8 +160,7 @@ def process_app_idea(idea: str):
       commit_changes(base_dir, message="Initial project setup")
       state_manager.update_codebase(generated_code)
 
-   else:
-      code_data = state_manager.get_codebase()
+   code_data = state_manager.get_codebase()
 
    while True:
       winsound.Beep(500, 500) #remove in production
@@ -188,12 +202,20 @@ def process_app_idea(idea: str):
       try:
          updated_code_data = json.loads(validated_update_code['messages'][-1].content)
       except json.JSONDecodeError as e:
-         print_error(f"JSON decoding error: {e}")
-         updated_code_data = None
-         return 1 #exits when there's a problem 
-      except Exception as e:
-         print_error(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
-         updated_code_data = None
+         print_error(f"JSON decoding error: {e}\nOutput was {validated_update_code['messages'][-1].content}")
+         try:
+            raw = response['messages'][-1].content
+
+            match = re.search(r"\[\s*{.*?}\s*\]", raw, re.DOTALL)
+            if match:
+               array_str = match.group(0)
+               batch_code = json.loads(array_str)
+               generated_code.extend(batch_code)
+            else:
+               print_error("No JSON array found in the response.")
+         except Exception as e:
+            print_error(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
+            updated_code_data = None
 
       # Update the codebase with new changes
       existing_files = {file["file_path"]: file for file in code_data}
@@ -215,5 +237,5 @@ def process_app_idea(idea: str):
 
 
 # if __name__ == "__main__":
-idea = "I want to build a Customer relation management app(CRM) using react for my company called 169pi"
+idea = "I want to build a Customer relation management app(CRM) using react for my company called 169pi, do not use any favicons in the app"
 process_app_idea(idea)

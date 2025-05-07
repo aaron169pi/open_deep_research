@@ -52,7 +52,7 @@ Each time you're invoked, you’ll receive:
 9. Never repeat code already generated in earlier batches.
 
 ### Output format:
-Respond with a **JSON array**, where each object represents a single file, like this:
+Always return a **raw JSON array**, where each object represents a single file, like this:
 
 [
   {
@@ -64,10 +64,10 @@ Respond with a **JSON array**, where each object represents a single file, like 
 ]
 
 ### Important formatting rules:
+- Do not include any markdown formatting, commentary, or introductory text of any kind. (eg of what NOT to send: Here's the JSON array with the requested files:)
 - Both `content` and `summary` must be **JSON-escaped strings**, with all line breaks as `\\n`, quotes escaped as `\\\"`, and no raw multiline strings.
 - The JSON output must be valid and directly loadable using `json.loads()` without modification.
-- Do not include any Markdown, backticks, or non-escaped characters.
-- Do not include any content outside the JSON array.
+- Do not include any output outside the JSON array.
 
 ### About the summary:
 The `summary` must not include commentary or explanations. Instead, it should serve as a precise and complete technical context that can be directly reused by future LLM invocations. This includes:
