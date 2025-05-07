@@ -8,7 +8,8 @@ class StateManager:
         self.state = {
             "plan": "",
             "codebase": [],
-            "user_requests": []
+            "user_requests": [],
+            "structure": []
         }
         self.load_state()
 
@@ -29,6 +30,10 @@ class StateManager:
         self.state["codebase"] = files
         self.save_state()
 
+    def update_structure(self, files: List[str]):
+        self.state["structure"] = files
+        self.save_state()
+
     def add_user_request(self, request: str):
         self.state["user_requests"].append(request)
         self.save_state()
@@ -38,6 +43,9 @@ class StateManager:
 
     def get_codebase(self) -> List[Dict[str, Any]]:
         return self.state["codebase"]
+    
+    def get_structure(self) -> List[str]:
+        return self.state["structure"]
 
     def get_user_requests(self) -> List[str]:
         return self.state["user_requests"]

@@ -37,7 +37,7 @@ def init_models():
    # )
    code_model = ChatAnthropic(
       model="claude-3-7-sonnet-20250219",
-      max_tokens=15000
+      max_tokens=17000
    )
    structure_model = ChatAnthropic(
       model="claude-3-7-sonnet-20250219",
@@ -72,8 +72,8 @@ def process_app_idea(idea: str):
    print(f"Using temp directory: {base_dir}")
    init_git_repo(base_dir)
 
-   # Check if codebase already exists
-   if not state_manager.get_codebase():
+   # Check if structure already exists
+   if not state_manager.get_structure():
       file_structure_prompt = (
          "Based on the following app idea and plan, generate a list of file paths only (no content). "
          "Only include files you intend to create. Respond in JSON list like: [\"src/App.js\", \"src/index.js\", ...].\n\n"
@@ -90,17 +90,23 @@ def process_app_idea(idea: str):
       structure_response = structure_agent.invoke({
          "messages": [{"role": "user", "content": f"Idea: {idea}\n\nPlan:\n{plan}"}]
       })
-      print(f"Structure: {structure_response['messages'][-1].content}")
       try:
          file_paths = json.loads(structure_response['messages'][-1].content)
+         state_manager.update_structure(file_paths)
       except Exception as e:
          try:
             raw = structure_response['messages'][-1].content
             file_paths = json.loads(raw.strip().strip("```json").strip("```").strip())
+            state_manager.update_structure(file_paths)
          except Exception as e:
             print_error(f"Structure parse error: {e}, raw response: {structure_response['messages'][-1].content}")
-            return 1
 
+   file_paths = state_manager.get_structure()
+
+   print(f"\nProject Structure:\n{file_paths}\n")
+
+   # Check if codebase already exists
+   if not state_manager.get_codebase():
       generated_code = []
       summary = []
 
@@ -119,6 +125,8 @@ def process_app_idea(idea: str):
          try:
             batch_code = json.loads(response['messages'][-1].content)
             generated_code.extend(batch_code)
+            save_files(generated_code, base_dir)
+            state_manager.update_codebase(generated_code)
          except Exception as e:
             try:
                raw = response['messages'][-1].content
@@ -128,6 +136,8 @@ def process_app_idea(idea: str):
                   array_str = match.group(0)
                   batch_code = json.loads(array_str)
                   generated_code.extend(batch_code)
+                  save_files(generated_code, base_dir)
+                  state_manager.update_codebase(generated_code)
                else:
                   print_error("No JSON array found in the response.")
             except Exception as e:
@@ -135,30 +145,7 @@ def process_app_idea(idea: str):
          summary.append([ {key: value for key, value in item.items() if key != "content"} for item in batch_code])
 
       print(f"Generated Code: \n\n{generated_code}")
-
-      # validation_agent = create_react_agent(
-      #    model=code_model,
-      #    tools=[],
-      #    prompt=code_validation_prompt,
-      #    response_format=FileResponseList
-      # )
-      # for i, file in enumerate(generated_code):
-      #    validated_update_code = validation_agent.invoke({"messages": [{"role": "user", "content": str(file)}]})
-      #    try:
-      #       updated_code_data = json.loads(validated_update_code['messages'][-1].content)
-      #       print(f"updated_code_data")
-      #       generated_code[i]['content'] = updated_code_data
-      #    except json.JSONDecodeError as e:
-      #       print_error(f"JSON decoding error: {e}")
-      #       updated_code_data = None
-      #    except Exception as e:
-      #       print_error(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
-      #       updated_code_data = None
-
-
-      save_files(generated_code, base_dir)
       commit_changes(base_dir, message="Initial project setup")
-      state_manager.update_codebase(generated_code)
 
    code_data = state_manager.get_codebase()
 
@@ -204,18 +191,19 @@ def process_app_idea(idea: str):
       except json.JSONDecodeError as e:
          print_error(f"JSON decoding error: {e}\nOutput was {validated_update_code['messages'][-1].content}")
          try:
-            raw = response['messages'][-1].content
+            raw = validated_update_code['messages'][-1].content
 
             match = re.search(r"\[\s*{.*?}\s*\]", raw, re.DOTALL)
             if match:
                array_str = match.group(0)
-               batch_code = json.loads(array_str)
-               generated_code.extend(batch_code)
+               updated_code_data = json.loads(array_str)
             else:
                print_error("No JSON array found in the response.")
          except Exception as e:
             print_error(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
             updated_code_data = None
+
+      print(f"\nUpdated Validated Code:\n{updated_code_data}\n")
 
       # Update the codebase with new changes
       existing_files = {file["file_path"]: file for file in code_data}
@@ -228,8 +216,6 @@ def process_app_idea(idea: str):
 
       code_data = list(existing_files.values())
 
-      print(f"Current Code: {code_data}")
-      
       save_files(code_data, base_dir)
       commit_changes(base_dir, message=f"Applied user request: {user_input}")
 
@@ -237,5 +223,5 @@ def process_app_idea(idea: str):
 
 
 # if __name__ == "__main__":
-idea = "I want to build a Customer relation management app(CRM) using react for my company called 169pi, do not use any favicons in the app"
+idea = "I want to build a windows application using electron to have a record of all my financial spendings, make sure there are various ways to store all kinds of data and to have tags, also let all the data be stored as a scv file that i can export anytime i want."
 process_app_idea(idea)
