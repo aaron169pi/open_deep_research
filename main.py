@@ -1,13 +1,14 @@
 import os
 import json
 from langgraph.prebuilt import create_react_agent
-from tools import save_files, init_git_repo, commit_changes
+from tools import save_files, init_git_repo, commit_changes, print_error, print_info, batch_files
 from prompts import planner_prompt, code_generation_prompt, code_validation_prompt
 from state_manager import StateManager
 from pydantic import BaseModel
 from typing import List
-from langchain_anthropic import ChatAnthropic
+# from langchain_anthropic import ChatAnthropic
 from langchain_deepseek import ChatDeepSeek
+from langchain_google_genai import ChatGoogleGenerativeAI
 import re
 import winsound #remove in production
 
@@ -27,31 +28,16 @@ def init_models():
       model="deepseek-chat",
       max_tokens=8000
    )
-   # code_model = ChatDeepSeek(
-   #    model="deepseek-chat",
-   #    max_tokens=8000
-   # )
-   # structure_model = ChatDeepSeek(
-   #    model="deepseek-chat",
-   #    max_tokens=8000
-   # )
-   code_model = ChatAnthropic(
-      model="claude-3-7-sonnet-20250219",
-      max_tokens=17000
-   )
-   structure_model = ChatAnthropic(
-      model="claude-3-7-sonnet-20250219",
+   structure_model = ChatGoogleGenerativeAI(
+      model="gemini-2.5-pro-preview-05-06",
       max_tokens=8000
+   )
+   code_model = ChatGoogleGenerativeAI(
+      model="gemini-2.5-pro-preview-05-06",
+      max_tokens=25000,
    )
 
    return planner_model, code_model, structure_model
-
-def print_error(str):
-   print('\033[91m' + str + '\033[0m')
-
-def batch_files(file_paths, batch_size):
-    for i in range(0, len(file_paths), batch_size):
-        yield file_paths[i:i + batch_size]
 
 def process_app_idea(idea: str):
    planner_model, code_model, structure_model = init_models()
@@ -101,14 +87,16 @@ def process_app_idea(idea: str):
          except Exception as e:
             print_error(f"Structure parse error: {e}, raw response: {structure_response['messages'][-1].content}")
 
-   file_paths = state_manager.get_structure()
+   structure = state_manager.get_structure()
+   gen_structure = state_manager.get_generated()
+   file_paths = [item for item in structure if item not in gen_structure]
 
-   print(f"\nProject Structure:\n{file_paths}\n")
+   print(f"\nProject Structure:\n{structure}\n")
 
    # Check if codebase already exists
-   if not state_manager.get_codebase():
-      generated_code = []
-      summary = []
+   if file_paths:
+      generated_code = state_manager.get_codebase()
+      summary = state_manager.get_summary()
 
       batch_agent = create_react_agent(
                model=code_model,
@@ -119,30 +107,37 @@ def process_app_idea(idea: str):
       for batch in batch_files(file_paths, batch_size=4):
          response = batch_agent.invoke({
             "messages": [{"role": "user", "content": 
-            f"Idea: {idea}\n\nPlan: {plan}\n\n\nEntire file structure: {file_paths}\n\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}"}]
+            f"Idea: {idea}\n\nPlan: {plan}\n\n\nEntire file structure: {structure}\n\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}"}]
          })
          print(f"\n\nBatch {batch}:\n\n{response['messages'][-1].content}")
          try:
             batch_code = json.loads(response['messages'][-1].content)
-            generated_code.extend(batch_code)
-            save_files(generated_code, base_dir)
-            state_manager.update_codebase(generated_code)
          except Exception as e:
             try:
                raw = response['messages'][-1].content
-
-               match = re.search(r"\[\s*{.*?}\s*\]", raw, re.DOTALL)
+               match = re.search(r"```json\s*(.*?)\s*```", raw, re.DOTALL)
                if match:
                   array_str = match.group(0)
+                  array_str = re.sub(r'```json\s*', '', array_str, flags=re.IGNORECASE)
+                  array_str = re.sub(r'```', '', array_str)
                   batch_code = json.loads(array_str)
-                  generated_code.extend(batch_code)
-                  save_files(generated_code, base_dir)
-                  state_manager.update_codebase(generated_code)
                else:
                   print_error("No JSON array found in the response.")
             except Exception as e:
-               print_error(f"Batch parse error: {e}, response: {response['messages'][-1].content}")
-         summary.append([ {key: value for key, value in item.items() if key != "content"} for item in batch_code])
+               print_error(f"Batch parse error: {e}, response: \n{response['messages'][-1].content}")
+
+         generated_code.extend(batch_code)
+
+         save_files(generated_code, base_dir)
+         state_manager.update_codebase(generated_code)
+
+         gen_structure.extend(batch)
+         state_manager.update_generated(gen_structure)
+
+         summary.append(
+            [{key: value for key, value in item.items() if key != "content"} for item in batch_code]
+         )
+         state_manager.update_summary(summary)
 
       print(f"Generated Code: \n\n{generated_code}")
       commit_changes(base_dir, message="Initial project setup")
@@ -189,37 +184,39 @@ def process_app_idea(idea: str):
       try:
          updated_code_data = json.loads(validated_update_code['messages'][-1].content)
       except json.JSONDecodeError as e:
-         print_error(f"JSON decoding error: {e}\nOutput was {validated_update_code['messages'][-1].content}")
          try:
             raw = validated_update_code['messages'][-1].content
-
-            match = re.search(r"\[\s*{.*?}\s*\]", raw, re.DOTALL)
+            match = re.search(r"```json\s*(.*?)\s*```", raw, re.DOTALL)
             if match:
                array_str = match.group(0)
+               array_str = re.sub(r'```json\s*', '', array_str, flags=re.IGNORECASE)
+               array_str = re.sub(r'```', '', array_str)
                updated_code_data = json.loads(array_str)
             else:
-               print_error("No JSON array found in the response.")
+               print_info("No JSON array found in the response.")
          except Exception as e:
-            print_error(f"Unexpected error: {e}, code was: {validated_update_code['messages']}")
-            updated_code_data = None
+            print_error(f"Batch parse error: {e}, response: \n{validated_update_code['messages'][-1].content}")
 
-      print(f"\nUpdated Validated Code:\n{updated_code_data}\n")
+            print_info("There was no update in the code, please check generated input")
 
-      # Update the codebase with new changes
-      existing_files = {file["file_path"]: file for file in code_data}
+      if updated_code_data:
+         print(f"\nUpdated Validated Code:\n{updated_code_data}\n")
+      
+         # Update the codebase with new changes
+         existing_files = {file["file_path"]: file for file in code_data}
 
-      for file in updated_code_data:
-         if file["content"] == "TERMINATE" or file["content"] == "":
-            existing_files.pop(file["file_path"], None)
-         else:
-            existing_files[file["file_path"]] = {"file_path": file["file_path"], "content": file["content"]}
+         for file in updated_code_data:
+            if file["content"] == "TERMINATE" or file["content"] == "":
+               existing_files.pop(file["file_path"], None)
+            else:
+               existing_files[file["file_path"]] = {"file_path": file["file_path"], "content": file["content"]}
 
-      code_data = list(existing_files.values())
+         code_data = list(existing_files.values())
 
-      save_files(code_data, base_dir)
-      commit_changes(base_dir, message=f"Applied user request: {user_input}")
+         save_files(code_data, base_dir)
+         commit_changes(base_dir, message=f"Applied user request: {user_input}")
 
-      state_manager.update_codebase(code_data)
+         state_manager.update_codebase(code_data)
 
 
 # if __name__ == "__main__":

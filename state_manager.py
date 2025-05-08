@@ -9,7 +9,9 @@ class StateManager:
             "plan": "",
             "codebase": [],
             "user_requests": [],
-            "structure": []
+            "structure": [],
+            "generated": [],
+            "summary": []
         }
         self.load_state()
 
@@ -30,6 +32,14 @@ class StateManager:
         self.state["codebase"] = files
         self.save_state()
 
+    def update_generated(self, files: List[str]):
+        self.state["generated"] = files
+        self.save_state()
+
+    def update_summary(self, files: List[str]):
+        self.state["summary"] = files
+        self.save_state()
+    
     def update_structure(self, files: List[str]):
         self.state["structure"] = files
         self.save_state()
@@ -46,6 +56,12 @@ class StateManager:
     
     def get_structure(self) -> List[str]:
         return self.state["structure"]
+    
+    def get_generated(self) -> List[str]:
+        return self.state["generated"]
+    
+    def get_summary(self) -> List[str]:
+        return self.state["summary"]
 
     def get_user_requests(self) -> List[str]:
         return self.state["user_requests"]
