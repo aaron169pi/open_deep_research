@@ -96,3 +96,37 @@ Respond with ONLY a valid JSON array of objects, where each object includes:
 - "content": complete fixed code for that file as a string
 No extra explanation, headers, or markdown — just the plain JSON.
 """
+
+# Prompt for file structure generation
+file_structure_prompt = """
+Given the following app idea and development plan, generate a minimal list of essential code file paths in JSON format, like: ["src/App.js", "src/index.js", ...].
+
+Guidelines:
+- Include only code files that you will actually create and implement.
+- Always include core setup files such as `package.json` (for React), `requirements.txt` (for Python), or their equivalents based on the stack.
+- Exclude paths for static assets (e.g., images, audio).
+- Avoid unnecessary files, only include files that are absolutely essential to the app's functionality.
+- Keep the file list as small and clean as possible.
+"""
+
+file_changes_prompt = """
+You are enhancing an existing project. The current files in the project are as follows:
+
+{code_context}
+
+The user will now provide a request to modify this project.
+
+Your task is to determine which files need to be changed, added, or deleted based on the request.
+
+Return a **strictly formatted** JSON list where each item is an object with the following structure:
+{{
+  "file_path": "<path to the file>",
+  "changes": "<description of the required changes or full updated content>"
+}}
+
+Guidelines:
+- For deleted files, set the "changes" value to "TERMINATE".
+- Only include files that are directly affected by the requested changes.
+- Do not include any explanations, comments, or text outside the JSON list.
+- Your response must be a valid JSON array only—no markdown, no extra formatting, no surrounding text.
+"""
