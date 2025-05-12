@@ -23,58 +23,62 @@ Be concise. Do not introduce tools or structures not aligned with the user's sta
 
 
 # Prompt for generating project plans
-planner_prompt = ChatPromptTemplate.from_messages([
-    ("system", PLANNER_PROMPT),
-    ("human", "{idea}")
-])
+planner_prompt = ChatPromptTemplate.from_messages(
+    [("system", PLANNER_PROMPT), ("human", "{idea}")]
+)
 
 # Prompt for code generation
 code_generation_prompt = """
 You are an expert software developer tasked with generating fully functional, interconnected code for a multi-file application in **batches**, based on a predefined file structure and project plan.
 
 Each time you're invoked, you’ll receive:
-- The complete list of intended file paths for the project
-- The current batch of file paths to generate
-- A description of the overall app and plan
-- (Optionally) code summary for previously generated files
+- The complete list of all intended file paths for the project.
+- The current batch of file paths to generate.
+- A description of the overall application and plan.
+- (Optional) Code summaries of previously generated files for context.
 
-### Your responsibilities:
-1. Generate complete, runnable code **only** for the files in the current batch.
-2. Ensure these files integrate seamlessly with any previously generated files (if provided).
-3. Avoid code duplication or naming conflicts by understanding and respecting previous context.
-4. Follow all explicit instructions from the user, even if they conflict with your assumptions.
-5. Write clean, well-structured code with comments where helpful (especially around logic and UI behavior).
-6. Use real, valid URLs for images and icons:
-   - For images, choose suitable ones from Unsplash, Pexels, or similar.
-   - For icons, use standard libraries like Material Icons, Lucide, Font Awesome, or Iconify.
-7. Never add or refer to files outside the current batch.
-8. Never use placeholders or dummy content.
-9. Never repeat code already generated in earlier batches.
+### Responsibilities:
+1. Generate complete, runnable code for **only** the files in the current batch.
+2. Ensure seamless integration with any previously generated files (if provided).
+3. Prevent code duplication, naming conflicts, or redundant logic by honoring prior context.
+4. Obey all explicit instructions from the user, even if they contradict your assumptions.
+5. Produce clean, modular, well-structured code with helpful inline comments around logic, UI, and state.
+6. For UI assets:
+   - Use real image URLs from Unsplash, Pexels, or similar platforms.
+   - Use valid icons from libraries like Material Icons, Lucide, Font Awesome, or Iconify.
+7. Never include or refer to files outside the current batch.
+8. Never use placeholders, mock data, or dummy content.
+9. Never repeat code that has already been generated in earlier batches.
+
+### Special instructions for Docker:
+- If the project includes Docker or Docker Compose files:
+  - Follow Docker best practices (small image size, non-root users if appropriate, caching layers).
+  - Always expose the necessary ports used by the application.
+  - In `docker-compose.yml`, list the **main service** first (e.g., `frontend` before `backend`) to reflect what the user directly interacts with.
 
 ### Output format:
-Always return a **raw JSON array**, where each object represents a single file, like this:
+Respond with a **raw JSON array**. Each object must contain:
+
+- `file_path`: Path to the file.
+- `content`: The **fully escaped string** of the code.
+- `summary`: A **fully escaped** detailed technical summary of all functions, components, constants, types, props, state, and context used in this file.
+
+Example format:
 
 [
   {
     "file_path": "relative/path/to/file.tsx",
     "content": "ESCAPED STRING OF THE FULL CODE HERE",
-    "summary": "ESCAPED STRING WITH A DETAILED TECHNICAL SUMMARY of all functions, components, constants, types, state, props, and context used or declared in this file."
+    "summary": "ESCAPED STRING WITH A DETAILED TECHNICAL SUMMARY..."
   },
   ...
 ]
 
-### Important formatting rules:
-- Do not include any markdown formatting, commentary, or introductory text of any kind. (eg of what NOT to send: Here's the JSON array with the requested files:)
-- Both `content` and `summary` must be **JSON-escaped strings**, with all line breaks as `\\n`, quotes escaped as `\\\"`, and no raw multiline strings.
-- The JSON output must be valid and directly loadable using `json.loads()` without modification.
-- Do not include any output outside the JSON array.
+### Formatting rules:
+- Do **not** include markdown, commentary, or any text outside the JSON array.
+- Escape all line breaks as `\\n`, escape quotes as `\\\"`, and ensure output is valid for `json.loads()`.
+- Use raw strings; do not use raw multiline string blocks or template syntax.
 
-### About the summary:
-The `summary` must not include commentary or explanations. Instead, it should serve as a precise and complete technical context that can be directly reused by future LLM invocations. This includes:
-- Definitions of all functions and components (including their parameters and return types)
-- Descriptions of any props, state, or context variables used or declared
-- Imports and exports
-- Any logic, conditions, or flow control patterns introduced
 """
 
 # Prompt for code validation
@@ -103,10 +107,15 @@ Given the following app idea and development plan, generate a minimal list of es
 
 Guidelines:
 - Include only code files that you will actually create and implement.
-- Always include core setup files such as `package.json` (for React), `requirements.txt` (for Python), or their equivalents based on the stack.
-- Exclude paths for static assets (e.g., images, audio).
-- Avoid unnecessary files, only include files that are absolutely essential to the app's functionality.
-- Keep the file list as small and clean as possible.
+- Always include core setup/config files such as:
+  - `package.json` (for Node.js/React projects)
+  - `requirements.txt` (for Python projects)
+  - `.gitignore` (always include; follow best practices to exclude environment files, dependencies, build artifacts, etc.)
+  - `Dockerfile` (always include; follow best practices for building a minimal, production-ready image relevant to the tech stack)
+  - `docker-compose.yml` (include only if the app requires multiple containers, such as separate frontend and backend services)
+- Exclude non-code static assets like images, audio, or videos.
+- Avoid placeholder or unnecessary files; only include files that are essential to the app's core functionality and deployment.
+- Keep the file list as small, clean, and purposeful as possible.
 """
 
 file_changes_prompt = """

@@ -2,6 +2,7 @@ import pickle
 import os
 from typing import List, Dict, Any
 
+
 class StateManager:
     def __init__(self, state_file: str = "state.pkl"):
         self.state_file = state_file
@@ -11,7 +12,7 @@ class StateManager:
             "user_requests": [],
             "structure": [],
             "generated": [],
-            "summary": []
+            "summary": [],
         }
         self.load_state()
 
@@ -39,7 +40,7 @@ class StateManager:
     def update_summary(self, files: List[str]):
         self.state["summary"] = files
         self.save_state()
-    
+
     def update_structure(self, files: List[str]):
         self.state["structure"] = files
         self.save_state()
@@ -53,13 +54,13 @@ class StateManager:
 
     def get_codebase(self) -> List[Dict[str, Any]]:
         return self.state["codebase"]
-    
+
     def get_structure(self) -> List[str]:
         return self.state["structure"]
-    
+
     def get_generated(self) -> List[str]:
         return self.state["generated"]
-    
+
     def get_summary(self) -> List[str]:
         return self.state["summary"]
 

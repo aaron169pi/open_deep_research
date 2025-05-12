@@ -1,7 +1,7 @@
 langchain
-langchain-google-genai
-python-dotenv
 langgraph
+langchain-google-genai
 langchain-anthropic
 langchain-deepseek
 pydantic
+docker
