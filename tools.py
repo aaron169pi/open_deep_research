@@ -62,5 +62,6 @@ def print_warning(str):
 
 
 def batch_files(file_paths, batch_size):
+    batches = (len(file_paths) // 4) + 1
     for i in range(0, len(file_paths), batch_size):
-        yield file_paths[i : i + batch_size]
+        yield f"{(i // batch_size) + 1}/{batches}", file_paths[i : i + batch_size]

@@ -61,21 +61,24 @@ class DockerAppManager:
 
             try:
                 subprocess.run(
-                    ["docker-compose", "up"],
+                    ["docker-compose", "up", "-d"],
                     cwd=self.project_dir,
                     check=True,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                 )
 
+                print_info("Starting container relaods")
+
                 # Post-start check: validate services and fetch logs if any service failed
                 version, service_names = self._extract_compose_info()
                 project_name = os.path.basename(self.project_dir)
 
                 for service in service_names:
-                    container_name = f"{project_name}_{service}_1"
+                    container_name = f"{project_name}-{service}-1"
 
                     try:
+                        print_info(f"Reloading: {container_name}")
                         container = self.client.containers.get(container_name)
                         container.reload()
 
@@ -143,7 +146,7 @@ class DockerAppManager:
         if self._use_docker_compose():
             try:
                 subprocess.run(
-                    ["docker-compose", "down"], cwd=self.project_dir, check=True
+                    ["docker-compose", "down", "-v"], cwd=self.project_dir, check=True
                 )
             except subprocess.CalledProcessError as e:
                 return 1, f"Error stopping containers: {e}"

@@ -91,7 +91,7 @@ def process_app_idea(idea: str):
                 prompt=code_generation_prompt,
                 response_format=FileGenerationList,
             )
-            for batch in batch_files(file_paths, batch_size=4):
+            for progress, batch in batch_files(file_paths, batch_size=4):
                 response = batch_agent.invoke(
                     {
                         "messages": [
@@ -110,7 +110,7 @@ def process_app_idea(idea: str):
                         "summary": file_response.summary,
                     }
                     batch_code.append(file_dict)
-                print(f"\n\nBatch {batch}:\n\n{batch_code}")
+                print(f"\n\nBatch({progress}) {batch}:\n\n{batch_code}")
 
                 generated_code.extend(batch_code)
 
@@ -179,7 +179,7 @@ def process_app_idea(idea: str):
                 code_changes_data.append(file_dict)
             print(f"Code Changes Suggested: \n\n{code_changes_data}\n\n")
 
-            for batch in batch_files(code_changes_data, batch_size=4):
+            for progress, batch in batch_files(code_changes_data, batch_size=4):
                 validation_agent = create_react_agent(
                     model=code_model,
                     tools=[],
@@ -208,7 +208,7 @@ def process_app_idea(idea: str):
                     updated_code_data.append(file_dict)
 
                 if updated_code_data:
-                    print(f"\nUpdated Validated Code: \n{updated_code_data}\n")
+                    print(f"\nUpdated Validated Code({progress}): \n{updated_code_data}\n")
 
                     # Update the codebase with new changes
                     existing_files = {file["file_path"]: file for file in code_data}
@@ -238,5 +238,5 @@ def process_app_idea(idea: str):
             commit_changes(base_dir, message=f"Applied user request: {user_input}")
 
 
-idea = "Create a website for attendace of college students make it using react frontend and fast api backend and also make sure all of their data ais logged and stored in a proper format"
+idea = "Create a website with backend and frontend for absolutely anything u want, it should be interesting"
 process_app_idea(idea)
