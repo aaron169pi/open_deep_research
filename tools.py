@@ -57,6 +57,10 @@ def print_info(text):
     print("\033[94m" + text + "\033[0m")
 
 
+def print_warning(str):
+    print("\033[93m" + str + "\033[0m")
+
+
 def batch_files(file_paths, batch_size):
     for i in range(0, len(file_paths), batch_size):
         yield file_paths[i : i + batch_size]

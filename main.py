@@ -6,6 +6,7 @@ from tools import (
     commit_changes,
     print_error,
     print_success,
+    print_warning,
     print_info,
     batch_files,
 )
@@ -28,7 +29,7 @@ def init_models():
     planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
     structure_model = ChatGoogleGenerativeAI(
         model="gemini-2.5-pro-preview-05-06",
-        max_tokens=8000,
+        max_tokens=10000,
     )
     code_model = ChatGoogleGenerativeAI(
         model="gemini-2.5-pro-preview-05-06",
@@ -133,9 +134,8 @@ def process_app_idea(idea: str):
         code_data = state_manager.get_codebase()
 
         while True:
-            # status = container_manager.build_and_run()
-            status = 0 , ""
-            if not status[0]:
+            status = container_manager.build_and_run()
+            if status[0] == 0:
                 print_success(status[1])
                 winsound.Beep(500, 500)  # remove in production
                 user_input = input(
@@ -146,12 +146,14 @@ def process_app_idea(idea: str):
                     break
                 if user_input.lower() in {"restart"}:
                     user_input = ""
-                    # container_manager.build_and_run()
+                    container_manager.build_and_run()
                     continue
 
             else:
-                winsound.Beep(300, 1000)  # remove in production
-                user_input = status[1]
+                winsound.Beep(300, 2000)  # remove in production
+                print_warning(str(status))
+                user_input = "Here is the error log make changes to fix this error:" + status[1]
+
 
             if not user_input:
                 continue
@@ -236,5 +238,5 @@ def process_app_idea(idea: str):
             commit_changes(base_dir, message=f"Applied user request: {user_input}")
 
 
-idea = "I want to build a model deployment framework which can also be used to serve api to user"
+idea = "Create a website for attendace of college students make it using react frontend and fast api backend and also make sure all of their data ais logged and stored in a proper format"
 process_app_idea(idea)

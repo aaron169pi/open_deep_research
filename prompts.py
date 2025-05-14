@@ -103,20 +103,23 @@ No extra explanation, headers, or markdown — just the plain JSON.
 
 # Prompt for file structure generation
 file_structure_prompt = """
-Given the following app idea and development plan, generate a minimal list of essential code file paths in JSON format, like: ["src/App.js", "src/index.js", ...].
+Given the following app idea and development plan, generate a list of essential code file paths in JSON format, like: ["src/App.js", "src/index.js", ...].
 
 Guidelines:
-- Include only code files that you will actually create and implement.
+- Include only code files that you will actually create and implement as part of the working solution.
+- Use best practices for structuring the project based on the chosen tech stack, ensuring scalability, maintainability, and clarity.
 - Always include core setup/config files such as:
   - `package.json` (for Node.js/React projects)
   - `requirements.txt` (for Python projects)
   - `.gitignore` (always include; follow best practices to exclude environment files, dependencies, build artifacts, etc.)
-  - `Dockerfile` (always include; follow best practices for building a minimal, production-ready image relevant to the tech stack)
-  - `docker-compose.yml` (include only if the app requires multiple containers, such as separate frontend and backend services)
-- Exclude non-code static assets like images, audio, or videos.
-- Avoid placeholder or unnecessary files; only include files that are essential to the app's core functionality and deployment.
-- Keep the file list as small, clean, and purposeful as possible.
+  - `Dockerfile` (always include; follow best practices for building a production-ready image suitable for the tech stack)
+  - `docker-compose.yml` (include if the app uses multiple containers, e.g., frontend and backend services, database, etc.)
+- Do not include static assets like images, audio, or videos unless directly used in code.
+- Avoid placeholder or redundant files; include only those essential for implementing the described functionality, logic, and deployment pipeline.
+- Ensure the structure supports real-world development workflows, including environment management, testing, deployment, and CI/CD integration where relevant.
+- **Always return a non-empty list of file paths**. Never return an empty array, even for minimal apps. Include all file names necessary for a fully working and deployable implementation.
 """
+
 
 file_changes_prompt = """
 You are enhancing an existing project. The current files in the project are as follows:
