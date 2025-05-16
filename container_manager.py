@@ -74,6 +74,8 @@ class DockerAppManager:
                 version, service_names = self._extract_compose_info()
                 project_name = os.path.basename(self.project_dir)
 
+                final_message = ""
+
                 for service in service_names:
                     container_name = f"{project_name}-{service}-1"
 
@@ -87,6 +89,20 @@ class DockerAppManager:
                             error_message = f"Service '{service}' failed to start.\nStatus: {container.status}\nLogs:\n{logs}"
                             return (8, error_message)
 
+                        links = ""
+
+                        ports_info = container.attrs["NetworkSettings"]["Ports"]
+                        for container_port, host_bindings in ports_info.items():
+                            if host_bindings:
+                                for binding in host_bindings:
+                                    host_port = binding.get("HostPort")
+                                    if host_port:
+                                        links += f"http://localhost:{host_port} "
+
+                        links = links.strip()
+
+                        final_message += f"{container_name} started on {links}\n"
+
                     except docker.errors.NotFound:
                         error_message = f"Container '{container_name}' not found after docker-compose up."
                         return (9, error_message)
@@ -96,10 +112,7 @@ class DockerAppManager:
                         )
                         return (10, error_message)
 
-                return (
-                    0,
-                    f"All containers started successfully on http://localhost:{self.host_port}.",
-                )
+                return (0, final_message)
 
             except subprocess.CalledProcessError as e:
                 error_message = f"Docker Compose error: {e}\n"

@@ -64,8 +64,6 @@ Return only a **JSON array of full relative file paths**, like:
 No markdown, no explanation — just the raw, valid JSON array of file paths.
 """
 
-
-
 # Prompt for code generation
 code_generation_prompt = """
 You are a senior software engineer generating **fully functional code** for a multi-file application, in **batches**, based on a provided file structure and project plan.
@@ -129,7 +127,6 @@ Each item must follow this format:
   "content": "FULLY VALIDATED AND FIXED CODE AS STRING"
 }
 """
-
 
 file_changes_prompt = """
 You are assisting in modifying an existing project.
