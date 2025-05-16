@@ -35,11 +35,8 @@ Your output must represent a runnable, testable, and clean MVP with modern conve
 - Ensure the list contains only what’s necessary to implement and demonstrate the app’s core functionality.
 
 ### Include:
-- `.gitignore` — with standard ignores like node_modules, environment files, and Docker-related artifacts
-- `Dockerfile` — must follow best practices, be minimal, and production-ready
-- `docker-compose.yml` — if the project contains multiple services (e.g., frontend + backend)
 - Dependency manifest — use `package.json`, `requirements.txt`, or equivalent, depending on the tech stack
-- `README.md` — include especially if setup requires container orchestration
+- `startuo.sh` — A mandatory script that sets up and runs everything required for the project without any issues. The startup.sh must install dependencies, build the project (if needed), configure the environment, and handle any necessary permissions or checks. It should enable a clean, one-command launch of the entire application on a fresh system.
 
 ### Guidelines:
 - Respect idiomatic folder structures for the chosen stack (e.g., `src/`, `app/`, etc.) — but only if needed
@@ -49,13 +46,11 @@ Your output must represent a runnable, testable, and clean MVP with modern conve
 - Do not include placeholder files or folders that aren't used yet
 - Do not generate mock assets or static files unless used directly in the code
 - Do not add extra layers of folders unless logically necessary
+- Do NOT add .gitignore files ever 
 
 ### Output Format:
 Return only a **JSON array of full relative file paths**, like:
 [
-  ".gitignore",
-  "Dockerfile",
-  "docker-compose.yml",
   "package.json",
   "src/index.js",
   "src/components/Header.js"
@@ -67,6 +62,10 @@ No markdown, no explanation — just the raw, valid JSON array of file paths.
 # Prompt for code generation
 code_generation_prompt = """
 You are a senior software engineer generating **fully functional code** for a multi-file application, in **batches**, based on a provided file structure and project plan.
+
+**Tool**
+If you're missing critical information such as environment variable keys, database credentials, third-party service choices, or any configuration where multiple valid options exist, use the `ask_user_input` tool to request clarification from the user before proceeding.
+
 
 **Inputs You'll Receive:**
 - Full list of intended file paths
@@ -86,13 +85,11 @@ You are a senior software engineer generating **fully functional code** for a mu
    - Use real image URLs from Unsplash, Pexels, or similar platforms to enrich visuals meaningfully.
    - Use appropriate, well-integrated icons from libraries like Material Icons, Lucide, Font Awesome, or Iconify.
    - Apply modern styling with responsiveness and clear visual hierarchy — avoid placeholder-looking designs.
-7. Docker-specific:
-   - Follow best practices: minimal images, caching, non-root users where applicable
-   - Expose required ports
-   - List **main service first** in `docker-compose.yml` (e.g., `frontend` before `backend`)
-8. Never:
+7. Never:
    - Include mock data, placeholders, or files outside the current batch
    - Repeat previously generated code
+8. `startup.sh` (if present in current batch of files to implement):
+   A mandatory script that sets up and runs everything required for the project without any issues. The startup.sh must install dependencies, build the project (if needed), configure the environment, and handle any necessary permissions or checks. It should enable a clean, one-command launch of the entire application on a fresh system.
 
 **Output Format:**
 Return a raw JSON array. Each object must include:
@@ -134,7 +131,9 @@ You are assisting in modifying an existing project.
 - Here is the current list of files with their content:
   {code_context}
 
-
+**Tool**
+If you're missing critical information such as environment variable keys, database credentials, third-party service choices, or any configuration where multiple valid options exist, use the `ask_user_input` tool to request clarification from the user before proceeding.
+  
 **Your Task:** Identify which files need to be added, modified, or deleted according to the user's request or need and how you can make the project function better.
 
 **Output Format (strict JSON array):**

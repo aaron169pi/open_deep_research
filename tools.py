@@ -1,5 +1,7 @@
 import os
 import subprocess
+import winsound
+from langchain_core.tools import Tool
 
 
 def save_files(code_data: str, base_dir: str) -> str:
@@ -65,3 +67,17 @@ def batch_files(file_paths, batch_size):
     batches = (len(file_paths) // 4) + 1
     for i in range(0, len(file_paths), batch_size):
         yield f"{(i // batch_size) + 1}/{batches}", file_paths[i : i + batch_size]
+
+
+def ask_user_input(prompt: str) -> str:
+    winsound.Beep(500, 500)  # remove in production
+    print("\nAgent needs your input:")
+    print(f"> {prompt}")
+    return input(">>> Your input: ").strip()
+
+
+ask_user_input_tool = Tool(
+    name="ask_user_input",
+    func=ask_user_input,
+    description="Ask the human for a missing detail. Takes a prompt string like 'What is the desired frontend framework?'",
+)
