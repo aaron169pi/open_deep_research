@@ -1,7 +1,16 @@
 import os
 import subprocess
+import uuid
+import requests
 import winsound
 from langchain_core.tools import Tool
+from dotenv import load_dotenv
+
+load_dotenv()
+
+GITHUB_PAT = os.getenv("GITHUB_PAT")
+GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
+GITHUB_EMAIL = os.getenv("GITHUB_EMAIL")
 
 
 def save_files(code_data: str, base_dir: str) -> str:
@@ -24,12 +33,14 @@ def init_git_repo() -> str:
         if not os.path.exists(os.path.join(base_dir, ".git")):
             subprocess.run(["git", "init"], cwd=base_dir, check=True)
             subprocess.run(
-                ["git", "config", "user.email", "you@example.com"],
+                ["git", "config", "user.email", GITHUB_EMAIL],
                 cwd=base_dir,
                 check=True,
             )
             subprocess.run(
-                ["git", "config", "user.name", "Your Name"], cwd=base_dir, check=True
+                ["git", "config", "user.name", GITHUB_USERNAME],
+                cwd=base_dir,
+                check=True,
             )
         return base_dir
     except subprocess.CalledProcessError as e:
@@ -41,10 +52,86 @@ def commit_changes(base_dir: str, message: str = "Update code") -> str:
     try:
         subprocess.run(["git", "add", "."], cwd=base_dir, check=True)
         subprocess.run(["git", "commit", "-m", message], cwd=base_dir, check=True)
-        return "Changes committed successfully."
+        push_to_github(base_dir)
     except subprocess.CalledProcessError as e:
         print_error(f"Error committing changes: {str(e)}")
         return f"Error committing changes: {str(e)}"
+
+
+def process_url(url: str) -> str:
+    url = url.rstrip("/")
+
+    print_error(url)
+
+    # Insert PAT
+    parts = url.split("https://github.com/")
+    final_url = f"https://{GITHUB_USERNAME}:{GITHUB_PAT}@github.com/{parts[1]}"
+
+    return final_url
+
+
+def create_github_repo(repo_prefix: str = "tempo") -> str:
+    repo_name = f"{repo_prefix}-{uuid.uuid4().hex[:8]}"
+    url = "https://api.github.com/user/repos"
+
+    headers = {
+        "Authorization": f"token {GITHUB_PAT}",
+        "Accept": "application/vnd.github+json",
+    }
+    data = {"name": repo_name, "private": True, "auto_init": False}
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 201:
+        print_success(f"Created GitHub repo: {repo_name}")
+        return f"https://github.com/{GITHUB_USERNAME}/{repo_name}.git"
+    else:
+        print_error(f"GitHub API error: {response.status_code} - {response.text}")
+        raise Exception(f"GitHub API error: {response.status_code} - {response.text}")
+
+
+def push_to_github(base_dir: str) -> str:
+    try:
+        # Check if a remote already exists
+        result = subprocess.run(
+            ["git", "remote"], cwd=base_dir, capture_output=True, text=True, check=True
+        )
+        remotes = result.stdout.strip().split()
+
+        if remotes:
+            # Remote exists — use it
+            remote_name = remotes[0]
+            result = subprocess.run(
+                ["git", "remote", "get-url", remote_name],
+                cwd=base_dir,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            remote_url = result.stdout.strip()
+            permission_url = process_url(remote_url)
+            subprocess.run(["git", "branch", "-M", "main"], cwd=base_dir, check=True)
+            subprocess.run(
+                ["git", "push", "-u", permission_url, "main"], cwd=base_dir, check=True
+            )
+        else:
+            # No remote — create GitHub repo and push
+            remote_url = create_github_repo()
+            permission_url = process_url(remote_url)
+            remote_name = "origin"
+            subprocess.run(
+                ["git", "remote", "add", remote_name, remote_url],
+                cwd=base_dir,
+                check=True,
+            )
+            subprocess.run(["git", "branch", "-M", "main"], cwd=base_dir, check=True)
+            subprocess.run(
+                ["git", "push", "-u", permission_url, "main"], cwd=base_dir, check=True
+            )
+
+        return remote_url
+    except subprocess.CalledProcessError as e:
+        print_error(f"Git error: {e}")
+    except Exception as e:
+        print_error(str(e))
 
 
 def print_error(str):

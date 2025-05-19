@@ -26,7 +26,11 @@ import winsound  # remove in production
 
 
 def init_models():
-    planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
+    # planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
+    planner_model = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash-preview-04-17",
+        max_tokens=8000,
+    )
     structure_model = ChatGoogleGenerativeAI(
         model="gemini-2.5-pro-preview-05-06",
         max_tokens=10000,
@@ -219,8 +223,10 @@ def process_app_idea(idea: str):
                     "There was no update in this batch, please check generated input"
                 )
 
-        commit_changes(base_dir, message=f"Applied user request: {user_input}")
+        commit_changes(base_dir, message=f"Applied user request: {user_input[:200]}")
 
 
-idea = "create a notes app with good features and quaint rustic ui using react and a simple backend using fastapi"
+idea = (
+    "create a MERN stack app for playing tick tac toe and saving the score with names"
+)
 process_app_idea(idea)
