@@ -12,7 +12,6 @@ GITHUB_PAT = os.getenv("GITHUB_PAT")
 GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
 GITHUB_EMAIL = os.getenv("GITHUB_EMAIL")
 
-
 def save_files(code_data: str, base_dir: str) -> str:
     try:
         for item in code_data:
@@ -47,12 +46,50 @@ def init_git_repo() -> str:
         print_error(f"Error initializing Git repository: {str(e)}")
         return base_dir
 
+def rollback_codebase(base_dir: str, commit_id: str):
+    try:
+        subprocess.run(["git", "checkout", commit_id], cwd=base_dir, check=True)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError(f"Git checkout failed: {e}")
+
+    # Step 2: Traverse the repository and collect file contents
+    file_dicts = []
+    for root, _, files in os.walk(base_dir):
+        for file in files:
+            file_path = os.path.join(root, file)
+
+            # Skip hidden files and .git directory
+            if ".git" in file_path or file.startswith('.'):
+                continue
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+                file_dicts.append({
+                    "file_path": os.path.relpath(file_path, base_dir),
+                    "content": content
+                })
+            except Exception as e:
+                print(f"Could not read file {file_path}: {e}")
+
+    return file_dicts
 
 def commit_changes(base_dir: str, message: str = "Update code") -> str:
     try:
         subprocess.run(["git", "add", "."], cwd=base_dir, check=True)
         subprocess.run(["git", "commit", "-m", message], cwd=base_dir, check=True)
-        push_to_github(base_dir)
+
+        # Get the latest commit hash
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=base_dir,
+            check=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        commit_id = result.stdout.strip()
+
+        print(commit_id)
+        return commit_id
     except subprocess.CalledProcessError as e:
         print_error(f"Error committing changes: {str(e)}")
         return f"Error committing changes: {str(e)}"
@@ -78,7 +115,7 @@ def create_github_repo(repo_prefix: str = "tempo") -> str:
         "Authorization": f"token {GITHUB_PAT}",
         "Accept": "application/vnd.github+json",
     }
-    data = {"name": repo_name, "private": True, "auto_init": False}
+    data = {"name": repo_name, "private": False, "auto_init": False}
     response = requests.post(url, headers=headers, json=data)
     if response.status_code == 201:
         print_success(f"Created GitHub repo: {repo_name}")
@@ -126,8 +163,6 @@ def push_to_github(base_dir: str) -> str:
             subprocess.run(
                 ["git", "push", "-u", permission_url, "main"], cwd=base_dir, check=True
             )
-
-        return remote_url
     except subprocess.CalledProcessError as e:
         print_error(f"Git error: {e}")
     except Exception as e:

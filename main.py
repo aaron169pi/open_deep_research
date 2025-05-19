@@ -4,6 +4,7 @@ from tools import (
     save_files,
     init_git_repo,
     commit_changes,
+    rollback_codebase,
     print_error,
     print_success,
     print_warning,
@@ -132,7 +133,10 @@ def process_app_idea(idea: str):
             state_manager.update_summary(summary)
 
         print(f"Generated Code: \n\n{generated_code}")
-        commit_changes(base_dir, message="Initial project setup")
+        commit_id = commit_changes(base_dir, message="Initial project setup")
+        state_manager.add_user_request(
+            {"user_input": "Initial project setup", "commit_id": commit_id}
+        )
 
     code_data = state_manager.get_codebase()
 
@@ -144,6 +148,21 @@ def process_app_idea(idea: str):
         if user_input.lower() in {"exit", "quit"}:
             print("Exiting loop.")
             break
+
+        if user_input.lower() in {"rollback"}:
+            user_reqs = state_manager.get_user_requests()
+
+            print("\n")
+            for i, req in enumerate(user_reqs):
+                print(f"[{i+1}] {req['commit_id']}   {req['user_input']}")
+
+            selection = int(input(">> Input the number for rollback: "))
+            id = user_reqs[selection - 1]['commit_id']
+            code_base = rollback_codebase(base_dir, id)
+            state_manager.update_codebase(code_base)
+            code_data = state_manager.get_codebase()
+            user_input = ""
+            continue
 
         if not user_input:
             continue
@@ -216,17 +235,19 @@ def process_app_idea(idea: str):
 
                 save_files(code_data, base_dir)
 
-                state_manager.add_user_request(user_input)
                 state_manager.update_codebase(code_data)
             else:
                 print_info(
                     "There was no update in this batch, please check generated input"
                 )
 
-        commit_changes(base_dir, message=f"Applied user request: {user_input[:200]}")
+        commit_id = commit_changes(
+            base_dir, message=f"Applied user request: {user_input[:200]}"
+        )
+        state_manager.add_user_request(
+            {"user_input": user_input, "commit_id": commit_id}
+        )
 
 
-idea = (
-    "create a MERN stack app for playing tick tac toe and saving the score with names"
-)
+idea = "create a simple notes app using html, css and js"
 process_app_idea(idea)
