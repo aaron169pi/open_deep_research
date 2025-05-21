@@ -10,6 +10,8 @@ from tools import (
     print_warning,
     print_info,
     batch_files,
+    start_server,
+    stop_server,
     ask_user_input_tool,
 )
 from prompts import (
@@ -25,6 +27,7 @@ from langchain_deepseek import ChatDeepSeek
 from langchain_google_genai import ChatGoogleGenerativeAI
 import winsound  # remove in production
 
+port = 8502
 
 def init_models():
     # planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
@@ -133,7 +136,8 @@ def process_app_idea(idea: str):
             state_manager.update_summary(summary)
 
         print(f"Generated Code: \n\n{generated_code}")
-        commit_id = commit_changes(base_dir, message="Initial project setup")
+        commit_id, repo_name = commit_changes(base_dir, message="Initial project setup")
+        state_manager.add_work_dir(repo_name)
         state_manager.add_user_request(
             {"user_input": "Initial project setup", "commit_id": commit_id}
         )
@@ -141,13 +145,24 @@ def process_app_idea(idea: str):
     code_data = state_manager.get_codebase()
 
     while True:
+        repo_name = state_manager.get_work_dir()
+        res = start_server(repo_name, port)
+        print_success(res)
+
         winsound.Beep(500, 500)  # remove in production
         user_input = input(
             "\n>>> Enter additional request for your project (or type 'exit'): "
         ).strip()
         if user_input.lower() in {"exit", "quit"}:
+            stop_server(repo_name)
             print("Exiting loop.")
             break
+
+        if user_input.lower() in {"restart"}:
+            res = start_server(repo_name, port)
+            print_success(res)
+            user_input = ""
+            continue
 
         if user_input.lower() in {"rollback"}:
             user_reqs = state_manager.get_user_requests()
@@ -157,7 +172,7 @@ def process_app_idea(idea: str):
                 print(f"[{i+1}] {req['commit_id']}   {req['user_input']}")
 
             selection = int(input(">> Input the number for rollback: "))
-            id = user_reqs[selection - 1]['commit_id']
+            id = user_reqs[selection - 1]["commit_id"]
             code_base = rollback_codebase(base_dir, id)
             state_manager.update_codebase(code_base)
             code_data = state_manager.get_codebase()
@@ -241,7 +256,7 @@ def process_app_idea(idea: str):
                     "There was no update in this batch, please check generated input"
                 )
 
-        commit_id = commit_changes(
+        commit_id, repo_name = commit_changes(
             base_dir, message=f"Applied user request: {user_input[:200]}"
         )
         state_manager.add_user_request(
@@ -249,5 +264,17 @@ def process_app_idea(idea: str):
         )
 
 
-idea = "create a simple notes app using html, css and js"
-process_app_idea(idea)
+try:
+    idea = """
+        A fitness tracking dashboard that:
+            • Shows workout history
+            • Tracks personal records
+            • Displays progress charts
+    """
+    process_app_idea(idea)
+
+finally:
+    state_manager = StateManager()
+    repo_name = state_manager.get_work_dir()
+    stop_server(repo_name)
+    print_error("Exited forcefully")

@@ -89,7 +89,9 @@ If you're missing critical information such as environment variable keys, databa
    - Include mock data, placeholders, or files outside the current batch
    - Repeat previously generated code
 8. `startup.sh` (if present in current batch of files to implement):
-   A mandatory script that sets up and runs everything required for the project without any issues. The startup.sh must install dependencies, build the project (if needed), configure the environment, and handle any necessary permissions or checks. It should enable a clean, one-command launch of the entire application on a fresh system.
+   - A mandatory script that sets up and runs everything required for the project without any issues. The startup.sh must install dependencies, build the project (if needed), configure the environment, and handle any necessary permissions or checks. It should enable a clean, one-command launch of the entire application on a fresh system. 
+   - Make sure that the frontend or any interface through which user can interact with the application is **always** on port 9000, even if it's streamlit or nodejs frontend or regular html
+   - Postgres SQL, Nodejs and Python are already installed in the system so use them accordingly, use psql to create credentials etc
 
 **Output Format:**
 Return a raw JSON array. Each object must include:

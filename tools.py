@@ -11,6 +11,8 @@ load_dotenv()
 GITHUB_PAT = os.getenv("GITHUB_PAT")
 GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
 GITHUB_EMAIL = os.getenv("GITHUB_EMAIL")
+API_URL = os.getenv("API_URL")
+
 
 def save_files(code_data: str, base_dir: str) -> str:
     try:
@@ -23,6 +25,26 @@ def save_files(code_data: str, base_dir: str) -> str:
     except Exception as e:
         print_error(f"Error saving files: {str(e)}")
         return f"Error saving files: {str(e)}"
+
+
+def start_server(dir_name: str, port: str) -> str:
+    try:
+        response = requests.post(
+            f"{API_URL}/execute_codebase", data={"dir_name": dir_name, "HOST_PORT": port}
+        )
+        response.raise_for_status()
+        return f"Server started: {response.json()}"
+    except requests.exceptions.RequestException as e:
+        return f"Failed to start server: {e}"
+
+
+def stop_server(dir_name: str) -> str:
+    try:
+        response = requests.post(f"{API_URL}/stop_process", data={"dir_name": dir_name})
+        response.raise_for_status()
+        return f"Server stopped: {response.json()}"
+    except requests.exceptions.RequestException as e:
+        return f"Failed to stop server: {e}"
 
 
 def init_git_repo() -> str:
@@ -46,9 +68,12 @@ def init_git_repo() -> str:
         print_error(f"Error initializing Git repository: {str(e)}")
         return base_dir
 
+
 def rollback_codebase(base_dir: str, commit_id: str):
     try:
-        subprocess.run(["git", "checkout", commit_id], cwd=base_dir, check=True)
+        subprocess.run(
+            ["git", "checkout", commit_id, "--", "."], cwd=base_dir, check=True
+        )
     except subprocess.CalledProcessError as e:
         raise RuntimeError(f"Git checkout failed: {e}")
 
@@ -59,19 +84,22 @@ def rollback_codebase(base_dir: str, commit_id: str):
             file_path = os.path.join(root, file)
 
             # Skip hidden files and .git directory
-            if ".git" in file_path or file.startswith('.'):
+            if ".git" in file_path or file.startswith("."):
                 continue
             try:
                 with open(file_path, "r", encoding="utf-8") as f:
                     content = f.read()
-                file_dicts.append({
-                    "file_path": os.path.relpath(file_path, base_dir),
-                    "content": content
-                })
+                file_dicts.append(
+                    {
+                        "file_path": os.path.relpath(file_path, base_dir),
+                        "content": content,
+                    }
+                )
             except Exception as e:
                 print(f"Could not read file {file_path}: {e}")
 
     return file_dicts
+
 
 def commit_changes(base_dir: str, message: str = "Update code") -> str:
     try:
@@ -83,13 +111,13 @@ def commit_changes(base_dir: str, message: str = "Update code") -> str:
             ["git", "rev-parse", "HEAD"],
             cwd=base_dir,
             check=True,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
         )
         commit_id = result.stdout.strip()
 
-        print(commit_id)
-        return commit_id
+        repo_name = push_to_github(base_dir)
+        return commit_id, repo_name
     except subprocess.CalledProcessError as e:
         print_error(f"Error committing changes: {str(e)}")
         return f"Error committing changes: {str(e)}"
@@ -119,7 +147,7 @@ def create_github_repo(repo_prefix: str = "tempo") -> str:
     response = requests.post(url, headers=headers, json=data)
     if response.status_code == 201:
         print_success(f"Created GitHub repo: {repo_name}")
-        return f"https://github.com/{GITHUB_USERNAME}/{repo_name}.git"
+        return f"https://github.com/{GITHUB_USERNAME}/{repo_name}.git", repo_name
     else:
         print_error(f"GitHub API error: {response.status_code} - {response.text}")
         raise Exception(f"GitHub API error: {response.status_code} - {response.text}")
@@ -145,17 +173,16 @@ def push_to_github(base_dir: str) -> str:
             )
             remote_url = result.stdout.strip()
             permission_url = process_url(remote_url)
-            subprocess.run(["git", "branch", "-M", "main"], cwd=base_dir, check=True)
             subprocess.run(
                 ["git", "push", "-u", permission_url, "main"], cwd=base_dir, check=True
             )
         else:
             # No remote — create GitHub repo and push
             remote_url = create_github_repo()
-            permission_url = process_url(remote_url)
+            permission_url = process_url(remote_url[0])
             remote_name = "origin"
             subprocess.run(
-                ["git", "remote", "add", remote_name, remote_url],
+                ["git", "remote", "add", remote_name, remote_url[0]],
                 cwd=base_dir,
                 check=True,
             )
@@ -163,6 +190,7 @@ def push_to_github(base_dir: str) -> str:
             subprocess.run(
                 ["git", "push", "-u", permission_url, "main"], cwd=base_dir, check=True
             )
+            return remote_url[1]
     except subprocess.CalledProcessError as e:
         print_error(f"Git error: {e}")
     except Exception as e:

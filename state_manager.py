@@ -8,6 +8,7 @@ class StateManager:
         self.state_file = state_file
         self.state = {
             "plan": "",
+            "work_dir": "",
             "codebase": [],
             "user_requests": [],
             "structure": [],
@@ -49,6 +50,10 @@ class StateManager:
         self.state["user_requests"].append(request)
         self.save_state()
 
+    def add_work_dir(self, work_dir: str):
+        self.state["work_dir"] = work_dir
+        self.save_state()
+
     def get_plan(self) -> str:
         return self.state["plan"]
 
@@ -66,3 +71,6 @@ class StateManager:
 
     def get_user_requests(self) -> List[str]:
         return self.state["user_requests"]
+
+    def get_work_dir(self) -> str:
+        return self.state["work_dir"]
