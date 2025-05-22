@@ -1,4 +1,5 @@
 import os
+import json
 import subprocess
 import uuid
 import requests
@@ -27,15 +28,58 @@ def save_files(code_data: str, base_dir: str) -> str:
         return f"Error saving files: {str(e)}"
 
 
-def start_server(dir_name: str, port: str) -> str:
+def start_server(dir_name: str) -> str:
     try:
+        print_info(f"Attempting to start server for directory: {dir_name}")
+        print_info(f"API URL: {API_URL}/execute_codebase")
+
+        # Add timeout and better error handling
         response = requests.post(
-            f"{API_URL}/execute_codebase", data={"dir_name": dir_name, "HOST_PORT": port}
+            f"{API_URL}/execute_codebase",
+            data={"dir_name": dir_name},
+            timeout=30,  # Add timeout
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded"
+            },  # Explicit content type
         )
+
+        print_info(f"Response status code: {response.status_code}")
+        print_info(f"Response headers: {dict(response.headers)}")
+
+        # Log response content for debugging
+        try:
+            response_json = response.json()
+            print_info(f"Response JSON: {json.dumps(response_json, indent=2)}")
+        except:
+            print_info(f"Response text: {response.text}")
+
         response.raise_for_status()
         return f"Server started: {response.json()}"
+
+    except requests.exceptions.Timeout:
+        error_msg = f"Request timed out after 30 seconds"
+        print_error(error_msg)
+        return error_msg
+
+    except requests.exceptions.ConnectionError as e:
+        error_msg = f"Connection error - API server might be down: {e}"
+        print_error(error_msg)
+        return error_msg
+
+    except requests.exceptions.HTTPError as e:
+        error_msg = f"HTTP Error {response.status_code}: {response.text}"
+        print_error(error_msg)
+        return error_msg
+
     except requests.exceptions.RequestException as e:
-        return f"Failed to start server: {e}"
+        error_msg = f"Request failed: {e}"
+        print_error(error_msg)
+        return error_msg
+
+    except Exception as e:
+        error_msg = f"Unexpected error: {str(e)}"
+        print_error(error_msg)
+        return error_msg
 
 
 def stop_server(dir_name: str) -> str:

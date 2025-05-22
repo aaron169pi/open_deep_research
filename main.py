@@ -147,40 +147,49 @@ def process_app_idea(idea: str):
     while True:
         repo_name = state_manager.get_work_dir()
         res = start_server(repo_name, port)
-        print_success(res)
 
-        winsound.Beep(500, 500)  # remove in production
-        user_input = input(
-            "\n>>> Enter additional request for your project (or type 'exit'): "
-        ).strip()
-        if user_input.lower() in {"exit", "quit"}:
-            stop_server(repo_name)
-            print("Exiting loop.")
-            break
-
-        if user_input.lower() in {"restart"}:
-            res = start_server(repo_name, port)
+        if "Failed" in res or "Error" in res:
+            print_error(res)
+            user_input = (
+                f"The server failed to start. Here is the error log from response.text:\n\n"
+                f"{res}\n\n"
+                f"Please analyze and fix the root cause in the code."
+            )
+        else:
             print_success(res)
-            user_input = ""
-            continue
+            winsound.Beep(500, 500)  # remove in production
+            user_input = input(
+                "\n>>> Enter additional request for your project (or type 'exit'): "
+            ).strip()
 
-        if user_input.lower() in {"rollback"}:
-            user_reqs = state_manager.get_user_requests()
+            if user_input.lower() in {"exit", "quit"}:
+                stop_server(repo_name)
+                print("Exiting loop.")
+                break
 
-            print("\n")
-            for i, req in enumerate(user_reqs):
-                print(f"[{i+1}] {req['commit_id']}   {req['user_input']}")
+            if user_input.lower() in {"restart"}:
+                res = start_server(repo_name, port)
+                print_success(res)
+                user_input = ""
+                continue
 
-            selection = int(input(">> Input the number for rollback: "))
-            id = user_reqs[selection - 1]["commit_id"]
-            code_base = rollback_codebase(base_dir, id)
-            state_manager.update_codebase(code_base)
-            code_data = state_manager.get_codebase()
-            user_input = ""
-            continue
+            if user_input.lower() in {"rollback"}:
+                user_reqs = state_manager.get_user_requests()
 
-        if not user_input:
-            continue
+                print("\n")
+                for i, req in enumerate(user_reqs):
+                    print(f"[{i+1}] {req['commit_id']}   {req['user_input']}")
+
+                selection = int(input(">> Input the number for rollback: "))
+                id = user_reqs[selection - 1]["commit_id"]
+                code_base = rollback_codebase(base_dir, id)
+                state_manager.update_codebase(code_base)
+                code_data = state_manager.get_codebase()
+                user_input = ""
+                continue
+
+            if not user_input:
+                continue
 
         # Prepare context for the agent
         code_context = json.dumps(code_data)

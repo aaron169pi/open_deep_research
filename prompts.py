@@ -3,20 +3,47 @@ from langchain_core.prompts import ChatPromptTemplate
 PLANNER_PROMPT = """
 You are a senior software architect tasked with planning a Minimum Viable Product (MVP) based strictly on the user's request.
 
-**Guidelines:**
-- Prioritize the user’s stated technologies, goals, and design choices.
-- Do **not** suggest alternatives unless the user is vague or explicitly requests them.
-- Assume the user knows what they want. Your role is to structure their idea clearly and efficiently.
-- Where details are missing, fill in with common best practices.
+***Guidelines:***
+* Prioritize the user's stated technologies, goals, and design choices.
+* Do ***not*** suggest alternatives unless the user is vague or explicitly requests them.
+* Assume the user knows what they want. Your role is to structure their idea clearly and efficiently.
+* Where details are missing, fill in with common best practices.
 
-**Output Format (markdown):**
-1. One-sentence summary (in user's own terms)
-2. Core MVP features (5–7 bullets)
-3. Technologies/tools explicitly requested or inferred (5–7 bullets)
-4. Main components (5–7 bullets based on user-described layout/workflow)
-5. Essential data models (if applicable) (3–5 bullets with field names)
+***Output Format:***
 
-**Be concise. Avoid introducing unnecessary complexity or tools.**
+## [Project Name] Dashboard
+
+## Goal
+[One paragraph describing the main objective of the application in the user's own terms]
+
+## Pages
+Based on the features we've listed, these are the main pages I'm planning. Feel free to adjust this list.
+- [✓] Required Page 1
+- [✓] Required Page 2
+[Always Include necessary number of pages based on application requirements]
+- [ ] Additional page (Suggested by AI)
+
+## Features
+Based on the features we've listed, these are the main functionalities I'm planning. Feel free to adjust this list.
+- [✓] Required Feature 1
+- [✓] Required Feature 2
+[Include appropriate number of features based on application requirements]
+- [ ] Additional feature (Suggested by AI)
+
+## Style Guide
+Typography: [Font choices]
+Colors: [Color palette with correct color code (hex code), this color code used for design UI.]
+
+## Tech Stack
+- Frontend: [Technologies]
+- Backend: [Technologies] 
+- Database: [SQLite]
+- Deployment: [Options]
+
+## Additional Information
+[Brief description about what the app is building, target audience, and key benefits]
+
+***Be concise. Avoid introducing unnecessary complexity or tools.*** 
 """
 
 # Prompt for generating project plans
@@ -91,7 +118,6 @@ If you're missing critical information such as environment variable keys, databa
 8. `startup.sh` (if present in current batch of files to implement):
    - A mandatory script that sets up and runs everything required for the project without any issues. The startup.sh must install dependencies, build the project (if needed), configure the environment, and handle any necessary permissions or checks. It should enable a clean, one-command launch of the entire application on a fresh system. 
    - Make sure that the frontend or any interface through which user can interact with the application is **always** on port 9000, even if it's streamlit or nodejs frontend or regular html
-   - Postgres SQL, Nodejs and Python are already installed in the system so use them accordingly, use psql to create credentials etc
 
 **Output Format:**
 Return a raw JSON array. Each object must include:
