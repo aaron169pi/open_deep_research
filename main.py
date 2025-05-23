@@ -12,6 +12,8 @@ from tools import (
     batch_files,
     start_server,
     stop_server,
+    server_logs,
+    rollback_server,
     ask_user_input_tool,
 )
 from prompts import (
@@ -27,7 +29,6 @@ from langchain_deepseek import ChatDeepSeek
 from langchain_google_genai import ChatGoogleGenerativeAI
 import winsound  # remove in production
 
-port = 8502
 
 def init_models():
     # planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
@@ -145,8 +146,13 @@ def process_app_idea(idea: str):
     code_data = state_manager.get_codebase()
 
     while True:
+        user_input = ""
         repo_name = state_manager.get_work_dir()
-        res = start_server(repo_name, port)
+
+        if user_input and user_input.lower() in {"logs"}:
+            res = start_server(repo_name)
+        else:
+            res = ""
 
         if "Failed" in res or "Error" in res:
             print_error(res)
@@ -154,6 +160,7 @@ def process_app_idea(idea: str):
                 f"The server failed to start. Here is the error log from response.text:\n\n"
                 f"{res}\n\n"
                 f"Please analyze and fix the root cause in the code."
+                "Make sure that a startup.sh file is created and the outgoing port is strictly 9000 if it is exposing 2 ports than serve the build file through the backend itself and then make the backend use 9000 port"
             )
         else:
             print_success(res)
@@ -168,10 +175,29 @@ def process_app_idea(idea: str):
                 break
 
             if user_input.lower() in {"restart"}:
-                res = start_server(repo_name, port)
+                res = start_server(repo_name)
                 print_success(res)
                 user_input = ""
                 continue
+
+            if user_input.lower() in {"logs"}:
+                res = server_logs(repo_name)
+                if "success" in res:
+                    print_info("There are no errors server-side")
+                    print_warning(f"Trace: {res}")
+                    continue
+                else:
+                    print_error(res)
+                    user_input = input("\n>>> Would you like to fix this error(y/n)?")
+                    if user_input in {"y", "yes"}:
+                        user_input = (
+                            "This code was run inside of a docker container, the container stopped due to some issue or something else happened"
+                            f"This was the error log: {res}"
+                            "Fix this error properly and any errors that might propogate due to this error too"
+                        )
+                    else:
+                        user_input = ""
+                        continue
 
             if user_input.lower() in {"rollback"}:
                 user_reqs = state_manager.get_user_requests()
@@ -183,6 +209,7 @@ def process_app_idea(idea: str):
                 selection = int(input(">> Input the number for rollback: "))
                 id = user_reqs[selection - 1]["commit_id"]
                 code_base = rollback_codebase(base_dir, id)
+                rollback_server(repo_name, id)
                 state_manager.update_codebase(code_base)
                 code_data = state_manager.get_codebase()
                 user_input = ""
@@ -274,12 +301,7 @@ def process_app_idea(idea: str):
 
 
 try:
-    idea = """
-        A fitness tracking dashboard that:
-            • Shows workout history
-            • Tracks personal records
-            • Displays progress charts
-    """
+    idea = "Create a blog website template that already has some prewritten blogs (4 to 5), make it a multi page website and make sure the UI is very flashy and cyberpunk, create it only using html, css and javascript"
     process_app_idea(idea)
 
 finally:

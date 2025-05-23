@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import subprocess
 import uuid
@@ -80,6 +81,43 @@ def start_server(dir_name: str) -> str:
         error_msg = f"Unexpected error: {str(e)}"
         print_error(error_msg)
         return error_msg
+
+
+def server_logs(dir_name: str) -> str:
+    try:
+        response = requests.get(f"{API_URL}/logs/{dir_name}")
+        response.raise_for_status()
+
+        logs = response.json()["stdout"][-2000:]
+        logs += "\n\n" + response.json()["stderr"][-2000:]
+
+
+        error_patterns = [
+            r"Traceback \(most recent call last\):[\s\S]+?(?=\n\[|$)",  # Python traceback
+            r"(?:Error|TypeError|ReferenceError|SyntaxError|RangeError|EvalError|URIError):[\s\S]+?(?=\n\[|$)"  # Node.js errors
+        ]
+    
+        errors = []
+        for pattern in error_patterns:
+            match = re.search(pattern, logs)
+            if match:
+                errors.append(match.group(0).strip())
+        
+        return "\n\n".join(errors) if errors else f"success: {errors}"
+    except requests.exceptions.RequestException as e:
+        return f"Failed to fetch logs: {e}"
+
+
+def rollback_server(dir_name: str, commit_id: str) -> str:
+    try:
+        response = requests.post(
+            f"{API_URL}/rollback_server",
+            data={"dir_name": dir_name, "commit_id": commit_id},
+        )
+        response.raise_for_status()
+        return f"Rollback successful: {response.json()}"
+    except requests.exceptions.RequestException as e:
+        return f"Failed to rollback server: {e}"
 
 
 def stop_server(dir_name: str) -> str:
