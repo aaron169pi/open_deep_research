@@ -144,12 +144,12 @@ def process_app_idea(idea: str):
         )
 
     code_data = state_manager.get_codebase()
+    user_input = "start"
 
     while True:
-        user_input = ""
         repo_name = state_manager.get_work_dir()
 
-        if user_input and user_input.lower() in {"logs"}:
+        if user_input and user_input.lower() in {"logs", "start"}:
             res = start_server(repo_name)
         else:
             res = ""
