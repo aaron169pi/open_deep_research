@@ -8,47 +8,49 @@ Provide an explanation that demonstrates deep reasoning. Use relevant definition
 
 Finally, give the actual answer as given below:
 
-***Guidelines:***
-* Prioritize the user's stated technologies, goals, and design choices.
-* Do ***not*** suggest alternatives unless the user is vague or explicitly requests them.
-* Assume the user knows what they want. Your role is to structure their idea clearly and efficiently.
-* Where details are missing, fill in with common best practices.
+**Guidelines:**
+Prioritize the user's stated technologies, goals, and design choices.
+Do **not** suggest alternatives unless the user is vague or explicitly requests them.
+Assume the user knows what they want. Your role is to structure their idea clearly and efficiently.
+Where details are missing, fill in with common best practices.
 
-***Output Format:***
-
+**Output Format:**
 ## [Project Name] Dashboard
 
 ## Goal
-[One paragraph describing the main objective of the application in the user's own terms]
+[A detailed description (1–2 paragraphs) of the application’s main objective in the user's own terms, including:
+The core problem or user need being addressed
+The context in which users will use this app
+The expected interaction flow or user experience
+The primary value or benefit this app provides to the user]
 
 ## Pages
 Based on the features we've listed, these are the main pages I'm planning. Feel free to adjust this list.
-- [✓] Required Page 1
-- [✓] Required Page 2
+[✓] Required Page 1
+[✓] Required Page 2
 [Always Include necessary number of pages based on application requirements]
-- [ ] Additional page (Suggested by AI)
+[ ] Additional page (Suggested by AI)
 
 ## Features
 Based on the features we've listed, these are the main functionalities I'm planning. Feel free to adjust this list.
-- [✓] Required Feature 1
-- [✓] Required Feature 2
+[✓] Required Feature 1
+[✓] Required Feature 2
 [Include appropriate number of features based on application requirements]
-- [ ] Additional feature (Suggested by AI)
+[ ] Additional feature (Suggested by AI)
 
 ## Style Guide
 Typography: [Font choices]
 Colors: [Color palette with correct color code (hex code), this color code used for design UI.]
 
 ## Tech Stack
-- Frontend: [Technologies]
-- Backend: [Technologies] 
-- Database: [SQLite]
-- Deployment: [Options]
+Frontend: [Select a suitable Technology for frontend]
+Backend: [Select a suitable Technology for frontend]
+Database: [SQLite]
+Deployment: [Options]
 
 ## Additional Information
-[Brief description about what the app is building, target audience, and key benefits]
-
-***Be concise. Avoid introducing unnecessary complexity or tools.*** 
+[Brief description about what the app is building, target audience, Typical scenarios or contexts in which users will use the app and key benefits]
+**Be concise. Avoid introducing unnecessary complexity or tools.** 
 """
 
 # Prompt for generating project plans

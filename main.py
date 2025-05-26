@@ -59,7 +59,53 @@ def process_app_idea(idea: str):
         state_manager.update_plan(plan)
 
     plan = state_manager.get_plan()
-    print(f"\nProject Plan:\n{plan}\n")
+
+    # print(f"\nProject Plan:\n{plan}\n")
+    print(f"\n Initial Project Plan:\n{plan}\n")
+
+    while True:
+        plan_feedback = {}
+        plan_feedback["goal"] = input(":large_green_circle: Change goal? (or type 'no'): ").strip()
+        plan_feedback["pages"] = input(":page_facing_up: Change pages? (or type 'no'): ").strip()
+        plan_feedback["features"] = input(":hammer_and_wrench: Change features? (or type 'no'): ").strip()
+        plan_feedback["typography"] = input(":abc: Change typography (fonts)? (or type 'no'): ").strip()
+        plan_feedback["colors"] = input(":art: Change colors (hex)? (or type 'no'): ").strip()
+        
+        # Check if all values are "no" or empty
+        if all(val.lower() in {"no", ""} for val in plan_feedback.values()):
+            print_info(" No changes made to the plan. Proceeding with implementation.")
+            break  # This break is inside the while True loop, so it's valid
+        
+        # Process the feedback and update the plan
+        feedback_json = json.dumps(plan_feedback, indent=2)
+        print(f"\n:arrows_counterclockwise: User Feedback:\n{feedback_json}\n")
+        
+        refined_plan_prompt = f"""
+    Here is the original project plan:
+
+    {plan}
+    The user has requested the following changes in JSON format:
+    {feedback_json}
+
+    First understand the original plan and make the changes accordingly.
+    Your task is to revise the original plan by merging the user's feedback carefully:
+    - Do *not* discard any original information unless the user clearly says so.
+    - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
+    - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
+    
+    Return the updated project plan in the exact same markdown format.
+    ***Be concise. Avoid introducing unnecessary complexity or tools.
+    """
+        refined_plan_response = planner_model.invoke(refined_plan_prompt)
+        refined_plan = refined_plan_response.content
+        print(f"\n Refined Plan:\n{refined_plan}")
+        state_manager.update_plan(refined_plan)
+        state_manager.add_user_request({
+            "user_input": feedback_json,
+            "type": "plan_refinement"
+        })
+        plan = refined_plan
+
 
     # Initialisation of directory
     base_dir = init_git_repo()
