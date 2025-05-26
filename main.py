@@ -86,6 +86,7 @@ def process_app_idea(idea: str):
     structure = state_manager.get_structure()
     gen_structure = state_manager.get_generated()
     file_paths = [item for item in structure if item not in gen_structure]
+    print_warning(str(file_paths))
     print(f"\nProject Structure: \n{structure}\n")
 
     # Check if codebase already exists
@@ -118,6 +119,8 @@ def process_app_idea(idea: str):
                     "summary": file_response.summary,
                 }
                 batch_code.append(file_dict)
+
+            print_success(response["structured_response"].reasoning)
             print(f"\n\nBatch({progress}) {batch}:\n\n{batch_code}")
 
             generated_code.extend(batch_code)
@@ -218,6 +221,17 @@ def process_app_idea(idea: str):
             if not user_input:
                 continue
 
+            res = server_logs(repo_name)
+            if "success" in res:
+                continue
+            else:
+                print_error(res)
+                user_input += (
+                    "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
+                    f"This was the error log: {res}"
+                    "Fix this error properly and any errors that might propogate due to this error too"
+                )
+
         # Prepare context for the agent
         code_context = json.dumps(code_data)
 
@@ -237,7 +251,8 @@ def process_app_idea(idea: str):
                 "changes": file_response.changes,
             }
             code_changes_data.append(file_dict)
-        print(f"Code Changes Suggested: \n\n{code_changes_data}\n\n")
+        print_success(response["structured_response"].reasoning)
+        print(f"\n\nCode Changes Suggested: \n\n{code_changes_data}\n\n")
 
         for progress, batch in batch_files(code_changes_data, batch_size=4):
             validation_agent = create_react_agent(
@@ -301,7 +316,7 @@ def process_app_idea(idea: str):
 
 
 try:
-    idea = "Create a website to play games, keep it in a cyberpunk theme, make sure the UI is really good and there a minimum of 5 games to play, make it a multipage application"
+    idea = "Create a simple web lanfing page for a persons portfolio using html, css"
     process_app_idea(idea)
 
 finally:

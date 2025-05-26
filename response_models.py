@@ -10,6 +10,7 @@ class FileGeneration(BaseModel):
 
 class FileGenerationList(BaseModel):
     items: List[FileGeneration]
+    reasoning: str
 
 
 class FileChanges(BaseModel):
@@ -19,7 +20,13 @@ class FileChanges(BaseModel):
 
 class FileChangesList(BaseModel):
     items: List[FileChanges]
+    reasoning: str
+
+
+class FileGroups(BaseModel):
+    file_path: str
+    group: str
 
 
 class FileStructureList(BaseModel):
-    paths: List[str]
+    paths: List[FileGroups]

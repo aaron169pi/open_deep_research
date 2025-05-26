@@ -3,6 +3,11 @@ from langchain_core.prompts import ChatPromptTemplate
 PLANNER_PROMPT = """
 You are a senior software architect tasked with planning a Minimum Viable Product (MVP) based strictly on the user's request.
 
+Always, start your answer with: 'here is the thinking process:' inside <thinking> </thinking> tags
+Provide an explanation that demonstrates deep reasoning. Use relevant definitions, principles, and examples. 
+
+Finally, give the actual answer as given below:
+
 ***Guidelines:***
 * Prioritize the user's stated technologies, goals, and design choices.
 * Do ***not*** suggest alternatives unless the user is vague or explicitly requests them.
@@ -75,15 +80,8 @@ Your output must represent a runnable, testable, and clean MVP with modern conve
 - Do not add extra layers of folders unless logically necessary
 - Do NOT add .gitignore files ever 
 
-### Output Format:
-Return only a **JSON array of full relative file paths**, like:
-[
-  "package.json",
-  "src/index.js",
-  "src/components/Header.js"
-]
 
-No markdown, no explanation — just the raw, valid JSON array of file paths.
+Along with each path make sure you include it's group, for example a frontend file would be grouped under the frontend group, a backend file under the backend group and so on, use your own expertise to group
 """
 
 # Prompt for code generation
@@ -121,7 +119,9 @@ If you're missing critical information such as environment variable keys, databa
    - If there are frontend and backend then, do not segregate frontend/backend, instead build the frontend and serve the files over the backend so that ONLY 9000 port is used
 
 **Output Format:**
-Return a raw JSON array. Each object must include:
+Return reasoning for what the code will do in very generic terms for non technical user for the reasoning key
+Return a raw JSON array in the items key. 
+Each object must include:
 - `file_path`: string
 - `content`: fully escaped string of complete code (escape quotes and newlines)
 - `summary`: escaped detailed technical summary (functions, components, types, props, state, context)
@@ -165,8 +165,8 @@ If you're missing critical information such as environment variable keys, databa
   
 **Your Task:** Identify which files need to be added, modified, or deleted according to the user's request or need and how you can make the project function better.
 
-**Output Format (strict JSON array):**
-Each item must follow this format:
+Return reasoning for why you are implementing these changes and what they will do in very generic terms for non technical user in the reasoning key
+Return items key where each item must follow this format:
 {{
   "file_path": "<relative path>",
   "changes": "<description of required changes or full updated content>"
