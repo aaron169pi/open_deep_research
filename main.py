@@ -1,3 +1,4 @@
+import os
 import json
 from langgraph.prebuilt import create_react_agent
 from tools import (
@@ -25,38 +26,92 @@ from prompts import (
 )
 from state_manager import StateManager
 from response_models import FileStructureList, FileGenerationList, FileChangesList
-from langchain_deepseek import ChatDeepSeek
-from langchain_google_genai import ChatGoogleGenerativeAI
 import winsound  # remove in production
+from google import genai
+from google.genai import types
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 def init_models():
-    # planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
-    planner_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-preview-04-17",
-        max_tokens=8000,
-    )
-    structure_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro-preview-05-06",
-        max_tokens=10000,
-    )
-    code_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro-preview-05-06",
-        max_tokens=25000,
-    )
+    client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
 
-    return planner_model, code_model, structure_model
+    model = client.models
+    planner_model = "gemini-2.5-flash-preview-04-17"
+    coder_model = "gemini-2.5-pro-preview-05-06"
 
+    return model, planner_model, coder_model
+
+
+def thinking_config(response_schema, thinking_budget=1024):
+    generation_config = types.GenerateContentConfig(
+        response_mime_type="application/json",
+        response_schema=response_schema,
+        thinking_config=types.ThinkingConfig(
+            include_thoughts=True, thinking_budget=thinking_budget
+        ),
+    )
+    return generation_config
+
+def unwrap_thinking(response):
+    thought, res = "", ""
+    for part in response.candidates[0].content.parts:
+        if not part.text:
+            continue
+        if part.thought:
+            thought += part.text + "\n\n"
+        else:
+            res += part.text
+    return thought, json.loads(res)
+
+def prompt_input(system_instruction, user_input):
+    system = {
+        "role": "user",
+        "parts": [{
+            "text": system_instruction
+        }]
+    }
+    user = {
+        "role": "user",
+        "parts": [{
+            "text": user_input
+        }]
+    }
+
+    return [system, user]
+
+plan_schema = {
+    "type": "object",
+    "properties": {"plan": {"type": "string"}},
+    "required": ["plan"],
+}
+
+structure_schema = {
+    "type": "object",
+    "properties": {
+        "file_structure": {
+            "type": "array",
+            "items": {"type": "string"}
+        }
+    },
+    "required": ["file_structure"]
+}
 
 def process_app_idea(idea: str):
-    planner_model, code_model, structure_model = init_models()
+    model, planner_model, coder_model = init_models()
     state_manager = StateManager()
 
     # Check if a plan already exists
     if not state_manager.get_plan():
-        plan_response = planner_model.invoke(planner_prompt.format(idea=idea))
-        plan = plan_response.content
-        state_manager.update_plan(plan)
+        plan_response = model.generate_content(
+            model=planner_model,
+            contents=planner_prompt.format(idea=idea),
+            config=thinking_config(plan_schema),
+        )
+        thought, response = unwrap_thinking(plan_response)
+        print_success(f"\nThinking: \n{thought}")
+        state_manager.update_plan(response['plan'])
 
     plan = state_manager.get_plan()
     print(f"\nProject Plan:\n{plan}\n")
@@ -67,20 +122,14 @@ def process_app_idea(idea: str):
 
     # Check if structure already exists
     if not state_manager.get_structure():
-        structure_agent = create_react_agent(
-            model=structure_model,
-            tools=[],
-            prompt=file_structure_prompt,
-            response_format=FileStructureList,
+        structre_response = model.generate_content(
+            model=coder_model,
+            contents=prompt_input(file_structure_prompt, f"Idea: {idea}\n\nPlan:\n{plan}"),
+            config=thinking_config(structure_schema),
         )
-        structure_response = structure_agent.invoke(
-            {
-                "messages": [
-                    {"role": "user", "content": f"Idea: {idea}\n\nPlan:\n{plan}"}
-                ]
-            }
-        )
-        file_paths = structure_response["structured_response"].paths
+        thought, response = unwrap_thinking(structre_response)
+        print_success(f"\nThinking: \n{thought}")
+        file_paths = response["file_structure"]
         state_manager.update_structure(file_paths)
 
     structure = state_manager.get_structure()
