@@ -149,7 +149,7 @@ def process_app_idea(idea: str):
     while True:
         repo_name = state_manager.get_work_dir()
 
-        if user_input and user_input.lower() in {"logs", "start"}:
+        if user_input.lower() not in {"logs"}:
             res = start_server(repo_name)
         else:
             res = ""
@@ -301,7 +301,7 @@ def process_app_idea(idea: str):
 
 
 try:
-    idea = "Create a blog website template that already has some prewritten blogs (4 to 5), make it a multi page website and make sure the UI is very flashy and cyberpunk, create it only using html, css and javascript"
+    idea = "Create a website to play games, keep it in a cyberpunk theme, make sure the UI is really good and there a minimum of 5 games to play, make it a multipage application"
     process_app_idea(idea)
 
 finally:

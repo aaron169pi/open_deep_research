@@ -117,7 +117,8 @@ If you're missing critical information such as environment variable keys, databa
    - Repeat previously generated code
 8. `startup.sh` (if present in current batch of files to implement):
    - A mandatory script that sets up and runs everything required for the project without any issues. The startup.sh must install dependencies, build the project (if needed), configure the environment, and handle any necessary permissions or checks. It should enable a clean, one-command launch of the entire application on a fresh system. 
-   - Make sure that the frontend or any interface through which user can interact with the application is **always** on port 9000, even if it's streamlit or nodejs frontend or regular html
+   - Make sure that the frontend or any interface through which user can interact with the application is **always** on port 9000, even if it's streamlit or nodejs frontend or regular html. 
+   - If there are frontend and backend then, do not segregate frontend/backend, instead build the frontend and serve the files over the backend so that ONLY 9000 port is used
 
 **Output Format:**
 Return a raw JSON array. Each object must include:
