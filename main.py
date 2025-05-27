@@ -59,52 +59,53 @@ def process_app_idea(idea: str):
         state_manager.update_plan(plan)
 
     plan = state_manager.get_plan()
+    if not state_manager.is_feedback_done():
+        print(f"\n Initial Project Plan:\n{plan}\n")
+        while True:
+            plan_feedback = {}
+            plan_feedback["goal"] = input(" Change goal? (or type 'no'): ").strip()
+            plan_feedback["pages"] = input(" Change pages? (or type 'no'): ").strip()
+            plan_feedback["features"] = input(" Change features? (or type 'no'): ").strip()
+            plan_feedback["typography"] = input("Change typography (fonts)? (or type 'no'): ").strip()
+            plan_feedback["colors"] = input("Change colors (hex)? (or type 'no'): ").strip()
+            
+            # Check if all values are "no" or empty
+            if all(val.lower() in {"no", ""} for val in plan_feedback.values()):
+                print_info(" No changes made to the plan. Proceeding with implementation.")
+                state_manager.mark_feedback_done()
+                print("Feedback marked as done. Exiting feedback loop.")
+                break  # This break is inside the while True loop, so it's valid
+            
+            # Process the feedback and update the plan
+            feedback_json = json.dumps(plan_feedback, indent=2)
+            print(f"\n User Feedback:\n{feedback_json}\n")
+            
+            refined_plan_prompt = f"""
+        Here is the original project plan:
 
-    # print(f"\nProject Plan:\n{plan}\n")
-    print(f"\n Initial Project Plan:\n{plan}\n")
+        {plan}
+        The user has requested the following changes in JSON format:
+        {feedback_json}
 
-    while True:
-        plan_feedback = {}
-        plan_feedback["goal"] = input(":large_green_circle: Change goal? (or type 'no'): ").strip()
-        plan_feedback["pages"] = input(":page_facing_up: Change pages? (or type 'no'): ").strip()
-        plan_feedback["features"] = input(":hammer_and_wrench: Change features? (or type 'no'): ").strip()
-        plan_feedback["typography"] = input(":abc: Change typography (fonts)? (or type 'no'): ").strip()
-        plan_feedback["colors"] = input(":art: Change colors (hex)? (or type 'no'): ").strip()
+        First understand the original plan and make the changes accordingly.
+        Your task is to revise the original plan by merging the user's feedback carefully:
+        - Do *not* discard any original information unless the user clearly says so.
+        - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
+        - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
         
-        # Check if all values are "no" or empty
-        if all(val.lower() in {"no", ""} for val in plan_feedback.values()):
-            print_info(" No changes made to the plan. Proceeding with implementation.")
-            break  # This break is inside the while True loop, so it's valid
-        
-        # Process the feedback and update the plan
-        feedback_json = json.dumps(plan_feedback, indent=2)
-        print(f"\n:arrows_counterclockwise: User Feedback:\n{feedback_json}\n")
-        
-        refined_plan_prompt = f"""
-    Here is the original project plan:
-
-    {plan}
-    The user has requested the following changes in JSON format:
-    {feedback_json}
-
-    First understand the original plan and make the changes accordingly.
-    Your task is to revise the original plan by merging the user's feedback carefully:
-    - Do *not* discard any original information unless the user clearly says so.
-    - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
-    - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
-    
-    Return the updated project plan in the exact same markdown format.
-    ***Be concise. Avoid introducing unnecessary complexity or tools.
-    """
-        refined_plan_response = planner_model.invoke(refined_plan_prompt)
-        refined_plan = refined_plan_response.content
-        print(f"\n Refined Plan:\n{refined_plan}")
-        state_manager.update_plan(refined_plan)
-        state_manager.add_user_request({
-            "user_input": feedback_json,
-            "type": "plan_refinement"
-        })
-        plan = refined_plan
+        Return the updated project plan in the exact same markdown format.
+        ***Be concise. Avoid introducing unnecessary complexity or tools.
+        """
+            refined_plan_response = planner_model.invoke(refined_plan_prompt)
+            refined_plan = refined_plan_response.content
+            print(f"\n Refined Plan:\n{refined_plan}")
+            state_manager.update_plan(refined_plan)
+            state_manager.add_user_request({
+                "user_input": feedback_json,
+                "type": "plan_refinement"
+            })
+            plan = refined_plan
+            state_manager.mark_feedback_done()
 
 
     # Initialisation of directory
@@ -229,24 +230,24 @@ def process_app_idea(idea: str):
                 user_input = ""
                 continue
 
-            if user_input.lower() in {"logs"}:
-                res = server_logs(repo_name)
-                if "success" in res:
-                    print_info("There are no errors server-side")
-                    print_warning(f"Trace: {res}")
-                    continue
-                else:
-                    print_error(res)
-                    user_input = input("\n>>> Would you like to fix this error(y/n)?")
-                    if user_input in {"y", "yes"}:
-                        user_input = (
-                            "This code was run inside of a docker container, the container stopped due to some issue or something else happened"
-                            f"This was the error log: {res}"
-                            "Fix this error properly and any errors that might propogate due to this error too"
-                        )
-                    else:
-                        user_input = ""
-                        continue
+            # if user_input.lower() in {"logs"}:
+            #     res = server_logs(repo_name)
+            #     if "success" in res:
+            #         print_info("There are no errors server-side")
+            #         print_warning(f"Trace: {res}")
+            #         continue
+            #     else:
+            #         print_error(res)
+            #         user_input = input("\n>>> Would you like to fix this error(y/n)?")
+            #         if user_input in {"y", "yes"}:
+            #             user_input = (
+            #                 "This code was run inside of a docker container, the container stopped due to some issue or something else happened"
+            #                 f"This was the error log: {res}"
+            #                 "Fix this error properly and any errors that might propogate due to this error too"
+            #             )
+            #         else:
+            #             user_input = ""
+            #             continue
 
             if user_input.lower() in {"rollback"}:
                 user_reqs = state_manager.get_user_requests()
@@ -269,7 +270,7 @@ def process_app_idea(idea: str):
 
             res = server_logs(repo_name)
             if "success" in res:
-                continue
+                pass
             else:
                 print_error(res)
                 user_input += (
@@ -362,7 +363,49 @@ def process_app_idea(idea: str):
 
 
 try:
-    idea = "Create a simple web lanfing page for a persons portfolio using html, css"
+    idea = """
+Design a one-page responsive website for a graphic design studio called hueneu. The layout should be inspired by Studio Morii's website—clean, minimal, scroll-based, and experience-led—but the tone, visuals, and experience must feel deeply personal and reflective of hueneu's identity.
+✦ What hueneu is all about:
+Name meaning: "Hue" = creative color bursts, "Neu" = grounding neutrality
+Personality: Quiet but bold. Calm, mysterious, and a little playful. A studio that surprises with unexpected design moments ("Who Knew?")
+Design style: Story-first, intentional, balanced, sometimes nostalgic, always evocative
+Voice: Warm, poetic, subtly humorous. Think soft sophistication—not cold minimalism
+✦ Structure & Content:
+1. Hero Section
+Animated hueneu logo reveal (just like Instagram's first post)
+Tagline: "Where stories find their aesthetic."
+Subtext: "Designs that whisper loud stories."
+Smooth scroll-down indicator, playful but minimal
+2. The hueneu Story
+Short section about what hueneu means
+Emphasize the balance of color and calm
+Bring in the "Who Knew?" moment with a fun visual pop-out or scroll-triggered element
+3. What We Do
+5-6 core offerings presented with icons or line visuals:
+Branding
+Packaging
+Social Media
+Stationery
+Coffee Table Books
+Creative Projects
+Each with a playful, single-line microcopy (e.g., "Packaging, but make it poetic")
+5. Why hueneu?
+Emotional brand pitch in poetic copy:
+"We don't just design—we decode stories."
+"Designs that speak quietly but stay with you."
+Highlight calm, mystery, and balance.
+6. Let's Work Together
+A contact form that feels like a note or letter
+Playful CTA button copy (e.g., "Let's design your story")
+Add Instagram: @hueneu_
+Optional: Embed a link to the services deck or a cute visual of the "Who Knew?" segment
+✦ Visual & Interaction Style:
+Color palette: Muted neutrals with occasional vibrant pops (inspired by brand's "Hue + Neu" concept)
+Typography: Modern, elegant sans-serif with hints of personality—balance clarity and surprise
+Layout: Scroll-based storytelling. Minimal, but not cold.
+Effects: Subtle animations, hover reveals, scroll-triggered movement—especially for "Who Knew?"
+Mood: Cozy. Intimate. Intriguing. Experimental in a soft-spoken way.
+"""
     process_app_idea(idea)
 
 finally:
