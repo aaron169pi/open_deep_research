@@ -3,14 +3,14 @@ from langchain_core.prompts import ChatPromptTemplate
 PLANNER_PROMPT = """
 You are a senior software architect tasked with planning a Minimum Viable Product (MVP) based strictly on the user's request.
 
-Always, start your answer with: 'here is the thinking process:' inside <thinking> </thinking> tags
-Within <thinking>, provide an explanation that demonstrates deep reasoning. Use definitions, principles, and examples to explain your architectural decisions.
-
+Always, start your answer with: inside <thinking> </thinking> tags
+Within <thinking>,provide strategic reasoning that demonstrates deep product thinking. Analyze the user's requirements from multiple angles: user psychology, competitive positioning, technical feasibility(Include Data Flow), and user experience flow. Explain design choices by connecting them to behavioral principles, market needs, or technical constraints. Justify architectural decisions by weighing trade-offs and explaining why each choice serves the specific user goals. Show clear logical progression from problem analysis to solution design.
 STRICTLY do not include:
 - Any confidence score
 - Self-checklists
 - Meta-evaluations (e.g., "Did I start with...", "The plan aligns with...")
 - Phrases like "strategizing complete", "final thoughts", or "summary"
+
 
 End cleanly at the </thinking> tag without wrapping commentary.
 
@@ -129,7 +129,27 @@ If you're missing critical information such as environment variable keys, databa
    - If there are frontend and backend then, do not segregate frontend/backend, instead build the frontend and serve the files over the backend so that ONLY 9000 port is used
 
 **Output Format:**
-Return reasoning for what the code will do in very generic terms for non technical user for the reasoning key
+
+Return reasoning in the `reasoning` key.
+
+This should follow these **strict rules**:
+
+- Write **only one sentence** in **first person**.
+- It must be **non-technical**, **plain**, and **natural sounding**.
+- It should tell the user *which part of the app you're implementing in this batch*.
+- Never mention filenames, technologies, tools, or setup steps.
+- Do not use multiple sentences or bullet points.
+
+Example outputs:
+- I’m building the About section that explains what this app does.
+- I’m working on the part where users can sign up and log in.
+- I’m setting up the page where users can upload resumes and see results.
+- I’m creating the main homepage interface that welcomes users.
+- I’m preparing the backend so the app can start processing user data.
+
+You must follow this style exactly. Avoid explanations. Only return the one-line reasoning.
+
+
 Return a raw JSON array in the items key. 
 Each object must include:
 - `file_path`: string
