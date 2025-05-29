@@ -84,7 +84,7 @@ def process_app_idea(idea: str):
         Here is the original project plan:
 
         {plan}
-        The user has requested the following changes in JSON format:
+        The user has provided the following feedback.
         {feedback_json}
 
         First understand the original plan and make the changes accordingly.
@@ -93,8 +93,15 @@ def process_app_idea(idea: str):
         - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
         - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
         
-        Return the updated project plan in the exact same markdown format.
-        ***Be concise. Avoid introducing unnecessary complexity or tools.
+        🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
+        - What the user's feedback was,
+        - What changes you made based on it,
+        - And how those changes respect and enhance the original plan.
+
+        Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
+        Your explanation should flow like human reasoning — not in list format or bullet points.
+        After that, return the revised project plan in the **exact same markdown format** as the original.
+        Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
         """
             refined_plan_response = planner_model.invoke(refined_plan_prompt)
             refined_plan = refined_plan_response.content
@@ -364,47 +371,7 @@ def process_app_idea(idea: str):
 
 try:
     idea = """
-Design a one-page responsive website for a graphic design studio called hueneu. The layout should be inspired by Studio Morii's website—clean, minimal, scroll-based, and experience-led—but the tone, visuals, and experience must feel deeply personal and reflective of hueneu's identity.
-✦ What hueneu is all about:
-Name meaning: "Hue" = creative color bursts, "Neu" = grounding neutrality
-Personality: Quiet but bold. Calm, mysterious, and a little playful. A studio that surprises with unexpected design moments ("Who Knew?")
-Design style: Story-first, intentional, balanced, sometimes nostalgic, always evocative
-Voice: Warm, poetic, subtly humorous. Think soft sophistication—not cold minimalism
-✦ Structure & Content:
-1. Hero Section
-Animated hueneu logo reveal (just like Instagram's first post)
-Tagline: "Where stories find their aesthetic."
-Subtext: "Designs that whisper loud stories."
-Smooth scroll-down indicator, playful but minimal
-2. The hueneu Story
-Short section about what hueneu means
-Emphasize the balance of color and calm
-Bring in the "Who Knew?" moment with a fun visual pop-out or scroll-triggered element
-3. What We Do
-5-6 core offerings presented with icons or line visuals:
-Branding
-Packaging
-Social Media
-Stationery
-Coffee Table Books
-Creative Projects
-Each with a playful, single-line microcopy (e.g., "Packaging, but make it poetic")
-5. Why hueneu?
-Emotional brand pitch in poetic copy:
-"We don't just design—we decode stories."
-"Designs that speak quietly but stay with you."
-Highlight calm, mystery, and balance.
-6. Let's Work Together
-A contact form that feels like a note or letter
-Playful CTA button copy (e.g., "Let's design your story")
-Add Instagram: @hueneu_
-Optional: Embed a link to the services deck or a cute visual of the "Who Knew?" segment
-✦ Visual & Interaction Style:
-Color palette: Muted neutrals with occasional vibrant pops (inspired by brand's "Hue + Neu" concept)
-Typography: Modern, elegant sans-serif with hints of personality—balance clarity and surprise
-Layout: Scroll-based storytelling. Minimal, but not cold.
-Effects: Subtle animations, hover reveals, scroll-triggered movement—especially for "Who Knew?"
-Mood: Cozy. Intimate. Intriguing. Experimental in a soft-spoken way.
+Design a web app that lets users enter their startup idea in a text box. The app should return a SWOT analysis, estimated market fit, competitor overview, and suggestions to refine the idea. Use AI to make the evaluation contextual and smart
 """
     process_app_idea(idea)
 
