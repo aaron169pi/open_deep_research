@@ -28,6 +28,14 @@ from response_models import FileStructureList, FileGenerationList, FileChangesLi
 from langchain_deepseek import ChatDeepSeek
 from langchain_google_genai import ChatGoogleGenerativeAI
 import winsound  # remove in production
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
+anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 
 def init_models():
@@ -277,7 +285,7 @@ def process_app_idea(idea: str):
 
             res = server_logs(repo_name)
             if "success" in res:
-                pass
+                print_info("There are no errors server-side")
             else:
                 print_error(res)
                 user_input += (
@@ -371,7 +379,47 @@ def process_app_idea(idea: str):
 
 try:
     idea = """
-Design a web app that lets users enter their startup idea in a text box. The app should return a SWOT analysis, estimated market fit, competitor overview, and suggestions to refine the idea. Use AI to make the evaluation contextual and smart
+Design a one-page responsive website for a graphic design studio called hueneu. The layout should be inspired by Studio Morii’s website—clean, minimal, scroll-based, and experience-led—but the tone, visuals, and experience must feel deeply personal and reflective of hueneu’s identity.
+✦ What hueneu is all about:
+Name meaning: “Hue” = creative color bursts, “Neu” = grounding neutrality
+Personality: Quiet but bold. Calm, mysterious, and a little playful. A studio that surprises with unexpected design moments (“Who Knew?”)
+Design style: Story-first, intentional, balanced, sometimes nostalgic, always evocative
+Voice: Warm, poetic, subtly humorous. Think soft sophistication—not cold minimalism
+✦ Structure & Content:
+1. Hero Section
+Animated hueneu logo reveal (just like Instagram’s first post)
+Tagline: “Where stories find their aesthetic.”
+Subtext: “Designs that whisper loud stories.”
+Smooth scroll-down indicator, playful but minimal
+2. The hueneu Story
+Short section about what hueneu means
+Emphasize the balance of color and calm
+Bring in the “Who Knew?” moment with a fun visual pop-out or scroll-triggered element
+3. What We Do
+5-6 core offerings presented with icons or line visuals:
+Branding
+Packaging
+Social Media
+Stationery
+Coffee Table Books
+Creative Projects
+Each with a playful, single-line microcopy (e.g., “Packaging, but make it poetic”)
+5. Why hueneu?
+Emotional brand pitch in poetic copy:
+“We don’t just design—we decode stories.”
+“Designs that speak quietly but stay with you.”
+Highlight calm, mystery, and balance.
+6. Let’s Work Together
+A contact form that feels like a note or letter
+Playful CTA button copy (e.g., “Let’s design your story”)
+Add Instagram: @hueneu_
+Optional: Embed a link to the services deck or a cute visual of the “Who Knew?” segment
+✦ Visual & Interaction Style:
+Color palette: Muted neutrals with occasional vibrant pops (inspired by brand’s “Hue + Neu” concept)
+Typography: Modern, elegant sans-serif with hints of personality—balance clarity and surprise
+Layout: Scroll-based storytelling. Minimal, but not cold.
+Effects: Subtle animations, hover reveals, scroll-triggered movement—especially for “Who Knew?”
+Mood: Cozy. Intimate. Intriguing. Experimental in a soft-spoken way.
 """
     process_app_idea(idea)
 
