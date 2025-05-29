@@ -117,9 +117,8 @@ def server_logs(dir_name: str) -> str:
 
         errors = []
         for pattern in error_patterns:
-            match = re.search(pattern, logs)
-            if match:
-                errors.append(match.group(0).strip())
+            matches = re.findall(pattern, logs, re.MULTILINE)
+            errors.extend(m.strip() for m in matches)
         
         return "\n\n".join(errors) if errors else f"success: {errors}"
     except requests.exceptions.RequestException as e:
