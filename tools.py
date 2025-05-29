@@ -91,22 +91,39 @@ def server_logs(dir_name: str) -> str:
         logs = response.json()["stdout"][-2000:]
         logs += "\n\n" + response.json()["stderr"][-2000:]
 
-
         error_patterns = [
-            r"Traceback \(most recent call last\):[\s\S]+?(?=\n\[|$)",  # Python traceback
-            r"(?:Error|TypeError|ReferenceError|SyntaxError|RangeError|EvalError|URIError):[\s\S]+?(?=\n\[|$)"  # Node.js errors
+            # Python traceback
+            r"Traceback \(most recent call last\):[\s\S]+?(?=\n\S|\Z)",
+
+            # JavaScript/Node.js common error types
+            r"(?:Error|TypeError|ReferenceError|SyntaxError|RangeError|EvalError|URIError):[\s\S]+?(?=\n\S|\Z)",
+            
+            # npm errors (multi-line block or single line), case-insensitive
+            r"(?i)^npm (?:ERR!|error).*(?:\n(?!\s*$).+)*",  # multi-line block
+            r"(?i)^npm (?:ERR!|error).*$",  # single line like "npm error Missing script: ..."
+            
+            # Module not found specifically
+            r"(?i)^.*module not found:.*$",
+
+            # Missing script specifically
+            r"(?i)^.*missing script:.*$",
+            
+            # Shell/bash errors
+            r"(?i)^.*(?:command not found|no such file or directory|permission denied|not recognized as an internal or external command).*$",
+            
+            # Generic line-level fallback for anything with 'error'
+            r"(?i)^.*error.*$",
         ]
-    
+
         errors = []
         for pattern in error_patterns:
-            match = re.search(pattern, logs)
-            if match:
-                errors.append(match.group(0).strip())
-        
+            matches = re.findall(pattern, logs, re.MULTILINE)
+            errors.extend(m.strip() for m in matches)
+
         return "\n\n".join(errors) if errors else f"success: {errors}"
     except requests.exceptions.RequestException as e:
         return f"Failed to fetch logs: {e}"
-
+    
 
 def rollback_server(dir_name: str, commit_id: str) -> str:
     try:
