@@ -230,7 +230,7 @@ def process_app_idea(idea: str):
             error_res = server_logs(repo_name)
             print_warning(error_res)
 
-            if "success" not in error_res:
+            if "success" not in error_res[:10]:
                 print_error(error_res)
                 user_input = (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
