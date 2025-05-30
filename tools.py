@@ -29,7 +29,12 @@ def save_files(code_data: str, base_dir: str) -> str:
         return f"Error saving files: {str(e)}"
 
 
-def start_server(dir_name: str) -> str:
+def check_website(link: str):
+    response = requests.get(link)
+    print_warning(f"Status Code: {response.status_code}")
+        
+
+def start_server(dir_name: str) -> object:
     try:
         print_info(f"Attempting to start server for directory: {dir_name}")
         print_info(f"API URL: {API_URL}/execute_codebase")
@@ -55,7 +60,7 @@ def start_server(dir_name: str) -> str:
             print_info(f"Response text: {response.text}")
 
         response.raise_for_status()
-        return f"Server started: {response.json()}"
+        return response_json
 
     except requests.exceptions.Timeout:
         error_msg = f"Request timed out after 30 seconds"

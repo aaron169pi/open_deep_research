@@ -14,6 +14,7 @@ from tools import (
     stop_server,
     server_logs,
     rollback_server,
+    check_website,
     ask_user_input_tool,
 )
 from prompts import (
@@ -71,12 +72,13 @@ def process_app_idea(idea: str):
     if not state_manager.is_feedback_done():
         print(f"\n Initial Project Plan:\n{plan}\n")
         while True:
+            winsound.Beep(500, 500)
             plan_feedback = {}
             plan_feedback["goal"] = input(" Change goal? (or type 'no'): ").strip()
             plan_feedback["pages"] = input(" Change pages? (or type 'no'): ").strip()
             plan_feedback["features"] = input(" Change features? (or type 'no'): ").strip()
-            plan_feedback["typography"] = input("Change typography (fonts)? (or type 'no'): ").strip()
-            plan_feedback["colors"] = input("Change colors (hex)? (or type 'no'): ").strip()
+            plan_feedback["typography"] = input(" Change typography (fonts)? (or type 'no'): ").strip()
+            plan_feedback["colors"] = input(" Change colors (hex)? (or type 'no'): ").strip()
             
             # Check if all values are "no" or empty
             if all(val.lower() in {"no", ""} for val in plan_feedback.values()):
@@ -214,7 +216,9 @@ def process_app_idea(idea: str):
 
     while True:
         repo_name = state_manager.get_work_dir()
-        server_res = start_server(repo_name)
+        server_res_obj = start_server(repo_name)
+        server_res = json.dumps(server_res_obj)
+        link = server_res_obj['link']
 
         if "Failed" in server_res or "Error" in server_res:
             print_error(server_res)
@@ -227,8 +231,9 @@ def process_app_idea(idea: str):
         else:
             print_warning("Checking for any errors...")
             time.sleep(15)
+            check_website(link)
+            time.sleep(3)
             error_res = server_logs(repo_name)
-            print_warning(error_res)
 
             if "success" not in error_res[:10]:
                 print_error(error_res)
