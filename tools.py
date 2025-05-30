@@ -92,6 +92,9 @@ def server_logs(dir_name: str) -> str:
         logs += "\n\n" + response.json()["stderr"][-2000:]
 
         error_patterns = [
+            # Catch long 'Cannot find module ...' style blocks
+            r"(Error: Cannot find module [\s\S]+?)(?=\n\S|\Z)",
+
             # Python traceback
             r"Traceback \(most recent call last\):[\s\S]+?(?=\n\S|\Z)",
 
@@ -117,13 +120,15 @@ def server_logs(dir_name: str) -> str:
 
         errors = []
         for pattern in error_patterns:
-            matches = re.findall(pattern, logs, re.MULTILINE)
+            matches = re.findall(pattern, logs, re.MULTILINE | re.DOTALL)
             errors.extend(m.strip() for m in matches)
-        
+
+        errors = list(dict.fromkeys(errors))
+
         return "\n\n".join(errors) if errors else f"success: {errors}"
     except requests.exceptions.RequestException as e:
         return f"Failed to fetch logs: {e}"
-    
+       
 
 def rollback_server(dir_name: str, commit_id: str) -> str:
     try:
