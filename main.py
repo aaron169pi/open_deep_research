@@ -30,6 +30,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 import winsound  # remove in production
 import os
 from dotenv import load_dotenv
+import time
 
 load_dotenv()
 
@@ -213,86 +214,65 @@ def process_app_idea(idea: str):
 
     while True:
         repo_name = state_manager.get_work_dir()
+        server_res = start_server(repo_name)
 
-        if user_input.lower() not in {"logs"}:
-            res = start_server(repo_name)
-        else:
-            res = ""
-
-        if "Failed" in res or "Error" in res:
-            print_error(res)
+        if "Failed" in server_res or "Error" in server_res:
+            print_error(server_res)
             user_input = (
                 f"The server failed to start. Here is the error log from response.text:\n\n"
-                f"{res}\n\n"
+                f"{server_res}\n\n"
                 f"Please analyze and fix the root cause in the code."
                 "Make sure that a startup.sh file is created and the outgoing port is strictly 9000 if it is exposing 2 ports than serve the build file through the backend itself and then make the backend use 9000 port"
             )
         else:
-            print_success(res)
-            winsound.Beep(500, 500)  # remove in production
-            user_input = input(
-                "\n>>> Enter additional request for your project (or type 'exit'): "
-            ).strip()
+            print_warning("Checking for any errors...")
+            time.sleep(30)
+            error_res = server_logs(repo_name)
 
-            if user_input.lower() in {"exit", "quit"}:
-                stop_server(repo_name)
-                print("Exiting loop.")
-                break
-
-            if user_input.lower() in {"restart"}:
-                res = start_server(repo_name)
-                print_success(res)
-                user_input = ""
-                continue
-
-            # if user_input.lower() in {"logs"}:
-            #     res = server_logs(repo_name)
-            #     if "success" in res:
-            #         print_info("There are no errors server-side")
-            #         print_warning(f"Trace: {res}")
-            #         continue
-            #     else:
-            #         print_error(res)
-            #         user_input = input("\n>>> Would you like to fix this error(y/n)?")
-            #         if user_input in {"y", "yes"}:
-            #             user_input = (
-            #                 "This code was run inside of a docker container, the container stopped due to some issue or something else happened"
-            #                 f"This was the error log: {res}"
-            #                 "Fix this error properly and any errors that might propogate due to this error too"
-            #             )
-            #         else:
-            #             user_input = ""
-            #             continue
-
-            if user_input.lower() in {"rollback"}:
-                user_reqs = state_manager.get_user_requests()
-
-                print("\n")
-                for i, req in enumerate(user_reqs):
-                    print(f"[{i+1}] {req['commit_id']}   {req['user_input']}")
-
-                selection = int(input(">> Input the number for rollback: "))
-                id = user_reqs[selection - 1]["commit_id"]
-                code_base = rollback_codebase(base_dir, id)
-                rollback_server(repo_name, id)
-                state_manager.update_codebase(code_base)
-                code_data = state_manager.get_codebase()
-                user_input = ""
-                continue
-
-            if not user_input:
-                continue
-
-            res = server_logs(repo_name)
-            if "success" in res:
-                print_info("There are no errors server-side")
-            else:
-                print_error(res)
+            if "success" not in error_res:
+                print_error(error_res)
                 user_input += (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
-                    f"This was the error log: {res}"
+                    f"This was the error log: {error_res}"
                     "Fix this error properly and any errors that might propogate due to this error too"
                 )
+            else:
+                print_info("There are no errors server-side")
+                print_success(server_res)
+                winsound.Beep(500, 500)  # remove in production
+                user_input = input(
+                    "\n>>> Enter additional request for your project (or type 'exit'): "
+                ).strip()
+
+                if user_input.lower() in {"exit", "quit"}:
+                    stop_server(repo_name)
+                    print("Exiting loop.")
+                    break
+
+                if user_input.lower() in {"restart"}:
+                    res = start_server(repo_name)
+                    print_success(res)
+                    user_input = ""
+                    continue
+
+                if user_input.lower() in {"rollback"}:
+                    user_reqs = state_manager.get_user_requests()
+
+                    print("\n")
+                    for i, req in enumerate(user_reqs):
+                        print(f"[{i+1}] {req['commit_id']}   {req['user_input']}")
+
+                    selection = int(input(">> Input the number for rollback: "))
+                    id = user_reqs[selection - 1]["commit_id"]
+                    code_base = rollback_codebase(base_dir, id)
+                    rollback_server(repo_name, id)
+                    state_manager.update_codebase(code_base)
+                    code_data = state_manager.get_codebase()
+                    user_input = ""
+                    continue
+
+                if not user_input:
+                    continue
 
         # Prepare context for the agent
         code_context = json.dumps(code_data)

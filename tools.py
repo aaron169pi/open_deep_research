@@ -203,7 +203,7 @@ def rollback_codebase(base_dir: str, commit_id: str):
 def commit_changes(base_dir: str, message: str = "Update code") -> str:
     try:
         subprocess.run(["git", "add", "."], cwd=base_dir, check=True)
-        subprocess.run(["git", "commit", "-m", message], cwd=base_dir, check=True)
+        subprocess.run(["git", "commit", "-m", message[:256]], cwd=base_dir, check=True)
 
         # Get the latest commit hash
         result = subprocess.run(
