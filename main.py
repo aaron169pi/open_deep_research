@@ -226,12 +226,13 @@ def process_app_idea(idea: str):
             )
         else:
             print_warning("Checking for any errors...")
-            time.sleep(30)
+            time.sleep(15)
             error_res = server_logs(repo_name)
+            print_warning(error_res)
 
             if "success" not in error_res:
                 print_error(error_res)
-                user_input += (
+                user_input = (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
                     f"This was the error log: {error_res}"
                     "Fix this error properly and any errors that might propogate due to this error too"
@@ -243,6 +244,15 @@ def process_app_idea(idea: str):
                 user_input = input(
                     "\n>>> Enter additional request for your project (or type 'exit'): "
                 ).strip()
+
+                error_res = server_logs(repo_name)
+                if "success" not in error_res:
+                    print_error(error_res)
+                    user_input += (
+                        "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
+                        f"This was the error log: {error_res}"
+                        "Fix this error properly and any errors that might propogate due to this error too"
+                    )
 
                 if user_input.lower() in {"exit", "quit"}:
                     stop_server(repo_name)
