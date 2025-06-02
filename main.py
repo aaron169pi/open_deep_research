@@ -218,7 +218,6 @@ def process_app_idea(idea: str):
         repo_name = state_manager.get_work_dir()
         server_res_obj = start_server(repo_name)
         server_res = json.dumps(server_res_obj)
-        link = server_res_obj['link']
 
         if "Failed" in server_res or "Error" in server_res:
             print_error(server_res)
@@ -231,6 +230,7 @@ def process_app_idea(idea: str):
         else:
             print_warning("Checking for any errors...")
             time.sleep(15)
+            link = server_res_obj['link']
             check_website(link)
             time.sleep(3)
             error_res = server_logs(repo_name)
