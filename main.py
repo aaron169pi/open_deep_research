@@ -231,15 +231,16 @@ def process_app_idea(idea: str):
             print_warning("Checking for any errors...")
             time.sleep(15)
             link = server_res_obj['link']
-            check_website(link)
+            code, check_msg = check_website(link)
             time.sleep(3)
             error_res = server_logs(repo_name)
 
-            if "success" not in error_res[:10]:
-                print_error(error_res)
+            if "success" not in error_res[:10] or code == 1:
+                print_error(f"This is the server error message: \n\n{error_res}\n\nThis is server response: \n\n {check_msg}")
                 user_input = (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
                     f"This was the error log: {error_res}"
+                    f"This was the server response: {check_msg}"
                     "Fix this error properly and any errors that might propogate due to this error too"
                 )
             else:

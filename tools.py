@@ -29,13 +29,13 @@ def save_files(code_data: str, base_dir: str) -> str:
         return f"Error saving files: {str(e)}"
 
 
-def check_website(link: str):
+def check_website(link: str) -> list:
     try:
         response = requests.get(link)
-        print_warning(f"Status Code: {response.status_code}")
+        return [0 if int(response.status_code) < 300 else 1, str(response)]
     except Exception as e:
         error_msg = f"Unexpected error: {str(e)}"
-        print_error(error_msg)
+        return [1, error_msg]
     
 
 def start_server(dir_name: str) -> object:
