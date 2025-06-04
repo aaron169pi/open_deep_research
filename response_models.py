@@ -30,3 +30,8 @@ class FileGroups(BaseModel):
 
 class FileStructureList(BaseModel):
     paths: List[FileGroups]
+
+
+class ReviewerResponse(BaseModel):
+    status_code: int
+    report: str

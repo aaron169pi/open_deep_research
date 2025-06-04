@@ -86,6 +86,16 @@ html_planner_input = """
   ${prompt}
 """
 
+reviewer_prompt = """
+You are a senior software engineer and technical user, you have received a codebase and need to review it for functionality, basic features, code integratiins and any issues that might arise.
+
+You need to compile a detailed report of what the issues are so that they may be solved and taken care of, do not give any changes just report what the actual problems are.
+
+If you see no issue and that the code is correct and will run then just send 0 in the status_code and if u see issues that need to be solved then send status_code as 1
+Send your report in the report key
+"""
+
+
 # Prompt for generating project plans
 planner_prompt = ChatPromptTemplate.from_messages(
     [("system", PLANNER_PROMPT), ("human", "{idea}")]
@@ -129,7 +139,7 @@ Along with each path make sure you include it's group, for example a frontend fi
 
 # Prompt for code generation
 code_generation_prompt = """
-You are a senior software engineer and UI/UX expert generating **production-ready, visually stunning code**, **fully functional code** for a multi-file application, in **batches**, based on a provided file structure and project plan.
+You are a senior software engineer and UI/UX expert generating **production-ready, visually stunning code**, **fully functional code** for a multi-file application that is end to end functional, in **batches**, based on a provided file structure and project plan.
 **Tool**
 If you're missing critical information such as environment variable keys, database credentials, third-party service choices, or any configuration where multiple valid options exist, use the `ask_user_input` tool to request clarification from the user before proceeding.
 **Inputs You'll Receive:**
@@ -143,14 +153,7 @@ If you're missing critical information such as environment variable keys, databa
 3. Avoid duplication, naming conflicts, or redundant logic.
 4. Obey all explicit user instructions — even if unconventional.
 5. Produce clean, modular code with inline comments for logic, state, and UI.
-6. For UI/UX EXCELLENCE REQUIREMENTS:
-   **Visual Design Standards:**
-    - Create **premium-quality interfaces** that look professional and modern
-    - Implement **sophisticated visual hierarchy** with proper spacing, typography scales, and color theory
-    - Use **advanced CSS techniques**: custom gradients, subtle shadows, sophisticated hover effects, smooth transitions
-    - Apply **modern design trends**: glassmorphism effects, neumorphism where appropriate, sophisticated color schemes
-    - Implement **micro-interactions**: button hover states, loading animations, smooth page transitions, form field focus effects
-    - Create **engaging visual elements**: custom illustrations, icons, beautiful empty states, success animations
+6. Always ensure that backend and frontend are fully integrated
 7. Never:
    - Include mock data, placeholders, or files outside the current batch
    - Repeat previously generated code

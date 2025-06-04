@@ -125,6 +125,9 @@ def server_logs(dir_name: str) -> str:
             
             # Generic line-level fallback for anything with 'error'
             r"(?i)^.*error.*$",
+
+            # sh: style errors like "sh: 1: react-scripts: not found"
+            r"^sh: \d+: .+$",
         ]
 
         errors = []

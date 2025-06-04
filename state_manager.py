@@ -15,17 +15,25 @@ class StateManager:
             "generated": [],
             "summary": [],
             "feedback_done": False,
-            "html": ""
+            "html": "",
+            "review_done": False
         }
         self.load_state()
 
     def mark_feedback_done(self):
         self.state["feedback_done"] = True
         self.save_state()
+    
+    def mark_review_done(self):
+        self.state["review_done"] = True
+        self.save_state()
 
     def is_feedback_done(self) -> bool:
         return self.state.get("feedback_done", False)
 
+
+    def is_review_done(self) -> bool:
+        return self.state.get("review_done", False)
 
     def load_state(self):
         if os.path.exists(self.state_file):

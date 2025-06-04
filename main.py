@@ -29,9 +29,15 @@ from prompts import (
     html_planner_input,
     html_planner_prompt,
     html_update_planner_prompt,
+    reviewer_prompt,
 )
 from state_manager import StateManager
-from response_models import FileStructureList, FileGenerationList, FileChangesList
+from response_models import (
+    FileStructureList,
+    FileGenerationList,
+    FileChangesList,
+    ReviewerResponse,
+)
 from langchain_deepseek import ChatDeepSeek
 from langchain_google_genai import ChatGoogleGenerativeAI
 import winsound  # remove in production
@@ -87,11 +93,15 @@ def process_app_idea(idea: str):
     print(plan)
     if not state_manager.is_feedback_done():
         print(f"\n Initial Project Plan:\n{plan}\n")
-        planner_input = html_planner_input.format(prompt=idea)
-        preview = code_model.invoke(
-            html_planner_prompt.format(plan=plan, input=planner_input)
-        )
-        html_data = preview.content
+        if not state_manager.get_html():
+            planner_input = html_planner_input.format(prompt=idea)
+            preview = code_model.invoke(
+                html_planner_prompt.format(plan=plan, input=planner_input)
+            )
+            html_data = preview.content
+        else:
+            html_data = state_manager.get_html()
+
         response = requests.post(
             preview_url,
             data=html_data.encode("utf-8"),
@@ -109,7 +119,7 @@ def process_app_idea(idea: str):
                     " No changes made to the plan. Proceeding with implementation."
                 )
                 state_manager.update_html(html_data)
-                state_manager.update_plan(refined_plan)
+                state_manager.update_plan(plan)
                 state_manager.mark_feedback_done()
                 print("Feedback marked as done. Exiting feedback loop.")
                 break  # This break is inside the while True loop, so it's valid
@@ -164,7 +174,7 @@ def process_app_idea(idea: str):
             )
             print_info(f"You can view the preview at {preview_url}")
 
-            state_manager.update_plan(refined_plan)
+            state_manager.update_plan(plan)
             state_manager.update_html(html_data)
             state_manager.mark_feedback_done()
 
@@ -193,7 +203,7 @@ def process_app_idea(idea: str):
                 "messages": [
                     {
                         "role": "user",
-                        "content": f"Idea: {idea}\n\nPlan:\n{plan}\n\nA sample preview generated using html for reference on how the website should look:\n{html_data}",
+                        "content": f"Idea: {idea}\n\nPlan:\n{plan}\n\nA sample preview generated using html only for reference on how the UI for the website should look:\n{html_data}",
                     }
                 ]
             }
@@ -224,7 +234,7 @@ def process_app_idea(idea: str):
                     "messages": [
                         {
                             "role": "user",
-                            "content": f"Idea: {idea}\n\nPlan: {plan}\n\nA sample preview generated using html for reference on how the website should look:\n{html_data}\n\n\nEntire file structure: {structure}\n\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}",
+                            "content": f"Idea: {idea}\n\nPlan: {plan}\n\nA sample preview generated using html only for reference on how the UI for the website should look:\n{html_data}\n\n\nEntire file structure: {structure}\n\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}",
                         }
                     ]
                 }
@@ -267,25 +277,51 @@ def process_app_idea(idea: str):
     code_data = state_manager.get_codebase()
     user_input = "start"
 
+    if not state_manager.is_review_done():
+        reviewer_agent = create_react_agent(
+            model=code_model,
+            tools=[],
+            prompt=reviewer_prompt,
+            response_format=ReviewerResponse,
+        )
+        response = reviewer_agent.invoke(
+            {
+                "messages": [
+                    {"role": "user", "content": f"This is the codebase {code_data}"}
+                ]
+            }
+        )
+        status_code = response["structured_response"].status_code
+        report = response["structured_response"].report or None
+        state_manager.mark_review_done()
+    else:
+        status_code = 0
+        report = None
+
     while True:
         repo_name = state_manager.get_work_dir()
         server_res_obj = start_server(repo_name)
         server_res = json.dumps(server_res_obj)
 
-        if "Failed" in server_res or "Error" in server_res:
-            print_error(server_res)
-            user_input = (
-                f"The server failed to start. Here is the error log from response.text:\n\n"
-                f"{server_res}\n\n"
-                f"Please analyze and fix the root cause in the code."
-                "Make sure that a startup.sh file is created and the outgoing port is strictly 9000 if it is exposing 2 ports than serve the build file through the backend itself and then make the backend use 9000 port"
-            )
+        if "Failed" in server_res or "Error" in server_res or status_code == 1:
+            if status_code == 1:
+                print_warning(report)
+                user_input = f"Here is the detailed report of the code review, please handle all of the errors detailed in this report and fix them: {report}"
+                status_code = 0
+            else:
+                print_error(server_res)
+                user_input = (
+                    f"The server failed to start. Here is the error log from response.text:\n\n"
+                    f"{server_res}\n\n"
+                    f"Please analyze and fix the root cause in the code."
+                    "Make sure that a startup.sh file is created and the outgoing port is strictly 9000 if it is exposing 2 ports than serve the build file through the backend itself and then make the backend use 9000 port"
+                )
         else:
             print_warning("Checking for any errors...")
-            time.sleep(15)
+            time.sleep(30)
             link = server_res_obj["link"]
             code, check_msg = check_website(link)
-            time.sleep(3)
+            time.sleep(5)
             error_res = server_logs(repo_name)
 
             if "success" not in error_res[:10] or code == 1:
@@ -439,6 +475,6 @@ def cleanup():
 
 
 idea = """
-Create web application for desktop and mobile with apartment listing with transparant character that people can use free of charge. Same easy of use as websites like AirBnB. Integrate Dutch point system for every apartment listing. Dutch point system assigns point and calculates maximum rent.
+Create web application for desktop and mobile with apartment listing with transparant character that people can use free of charge. Same easy of use as websites like AirBnB. Integrate Dutch point system for every apartment listing. Dutch point system assigns point and calculates maximum rent. Build it MERN Stack
 """
 process_app_idea(idea)
