@@ -1,4 +1,7 @@
 import json
+import requests
+import subprocess
+import atexit
 from langgraph.prebuilt import create_react_agent
 from tools import (
     save_files,
@@ -23,6 +26,9 @@ from prompts import (
     code_validation_prompt,
     file_structure_prompt,
     file_changes_prompt,
+    html_planner_input,
+    html_planner_prompt,
+    html_update_planner_prompt,
 )
 from state_manager import StateManager
 from response_models import FileStructureList, FileGenerationList, FileChangesList
@@ -38,6 +44,15 @@ load_dotenv()
 deepseek_api_key = os.getenv("DEEPSEEK_API_KEY")
 anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
 gemini_api_key = os.getenv("GEMINI_API_KEY")
+preview_url = os.getenv("PREVIEW_URL")
+
+# Start uvicorn as a subprocess with no stdio
+process = subprocess.Popen(
+    ["uvicorn", "preview:app", "--host", "0.0.0.0", "--port", "7000"],
+    stdout=subprocess.DEVNULL,
+    stderr=subprocess.DEVNULL,
+    stdin=subprocess.DEVNULL,
+)
 
 
 def init_models():
@@ -69,34 +84,45 @@ def process_app_idea(idea: str):
         state_manager.update_plan(plan)
 
     plan = state_manager.get_plan()
+    print(plan)
     if not state_manager.is_feedback_done():
         print(f"\n Initial Project Plan:\n{plan}\n")
+        planner_input = html_planner_input.format(prompt=idea)
+        preview = code_model.invoke(
+            html_planner_prompt.format(plan=plan, input=planner_input)
+        )
+        html_data = preview.content
+        response = requests.post(
+            preview_url,
+            data=html_data.encode("utf-8"),
+            headers={"Content-Type": "text/plain"},
+        )
+        print_info(f"You can view the preview at {preview_url}")
+
         while True:
             winsound.Beep(500, 500)
-            plan_feedback = {}
-            plan_feedback["goal"] = input(" Change goal? (or type 'no'): ").strip()
-            plan_feedback["pages"] = input(" Change pages? (or type 'no'): ").strip()
-            plan_feedback["features"] = input(" Change features? (or type 'no'): ").strip()
-            plan_feedback["typography"] = input(" Change typography (fonts)? (or type 'no'): ").strip()
-            plan_feedback["colors"] = input(" Change colors (hex)? (or type 'no'): ").strip()
-            
+            plan_feedback = input("Do you have any changes? (or type 'no')\n>>>")
+
             # Check if all values are "no" or empty
-            if all(val.lower() in {"no", ""} for val in plan_feedback.values()):
-                print_info(" No changes made to the plan. Proceeding with implementation.")
+            if plan_feedback in {"no", "n", ""}:
+                print_info(
+                    " No changes made to the plan. Proceeding with implementation."
+                )
+                state_manager.update_html(html_data)
+                state_manager.update_plan(refined_plan)
                 state_manager.mark_feedback_done()
                 print("Feedback marked as done. Exiting feedback loop.")
                 break  # This break is inside the while True loop, so it's valid
-            
-            # Process the feedback and update the plan
-            feedback_json = json.dumps(plan_feedback, indent=2)
-            print(f"\n User Feedback:\n{feedback_json}\n")
-            
+
             refined_plan_prompt = f"""
         Here is the original project plan:
 
         {plan}
         The user has provided the following feedback.
-        {feedback_json}
+        {plan_feedback}
+        A preview using HTML was also generate and these are the contents for reference
+        {html_data}
+        If the user's query is purely regarding the html and makes no actual change to the plan then give back the old plan itself
 
         First understand the original plan and make the changes accordingly.
         Your task is to revise the original plan by merging the user's feedback carefully:
@@ -117,14 +143,38 @@ def process_app_idea(idea: str):
             refined_plan_response = planner_model.invoke(refined_plan_prompt)
             refined_plan = refined_plan_response.content
             print(f"\n Refined Plan:\n{refined_plan}")
-            state_manager.update_plan(refined_plan)
-            state_manager.add_user_request({
-                "user_input": feedback_json,
-                "type": "plan_refinement"
-            })
+
+            planner_input = html_planner_input.format(prompt=idea)
+            planner_update_input = html_planner_input.format(prompt=plan_feedback)
+            preview = code_model.invoke(
+                html_update_planner_prompt.format(
+                    plan=plan,
+                    input=planner_input,
+                    html_code=html_data,
+                    refined_plan=refined_plan,
+                    user_suggestion=planner_update_input,
+                )
+            )
+            html_data = preview.content
             plan = refined_plan
+            response = requests.post(
+                preview_url,
+                data=html_data.encode("utf-8"),
+                headers={"Content-Type": "text/plain"},
+            )
+            print_info(f"You can view the preview at {preview_url}")
+
+            state_manager.update_plan(refined_plan)
+            state_manager.update_html(html_data)
             state_manager.mark_feedback_done()
 
+    print_success(f"Preview: {preview_url}")
+    html_data = state_manager.get_html()
+    response = requests.post(
+        preview_url,
+        data=html_data.encode("utf-8"),
+        headers={"Content-Type": "text/plain"},
+    )
 
     # Initialisation of directory
     base_dir = init_git_repo()
@@ -141,7 +191,10 @@ def process_app_idea(idea: str):
         structure_response = structure_agent.invoke(
             {
                 "messages": [
-                    {"role": "user", "content": f"Idea: {idea}\n\nPlan:\n{plan}"}
+                    {
+                        "role": "user",
+                        "content": f"Idea: {idea}\n\nPlan:\n{plan}\n\nA sample preview generated using html for reference on how the website should look:\n{html_data}",
+                    }
                 ]
             }
         )
@@ -171,7 +224,7 @@ def process_app_idea(idea: str):
                     "messages": [
                         {
                             "role": "user",
-                            "content": f"Idea: {idea}\n\nPlan: {plan}\n\n\nEntire file structure: {structure}\n\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}",
+                            "content": f"Idea: {idea}\n\nPlan: {plan}\n\nA sample preview generated using html for reference on how the website should look:\n{html_data}\n\n\nEntire file structure: {structure}\n\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}",
                         }
                     ]
                 }
@@ -230,13 +283,15 @@ def process_app_idea(idea: str):
         else:
             print_warning("Checking for any errors...")
             time.sleep(15)
-            link = server_res_obj['link']
+            link = server_res_obj["link"]
             code, check_msg = check_website(link)
             time.sleep(3)
             error_res = server_logs(repo_name)
 
             if "success" not in error_res[:10] or code == 1:
-                print_error(f"This is the server error message: \n\n{error_res}\n\nThis is server response: \n\n {check_msg}")
+                print_error(
+                    f"This is the server error message: \n\n{error_res}\n\nThis is server response: \n\n {check_msg}"
+                )
                 user_input = (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
                     f"This was the error log: {error_res}"
@@ -373,54 +428,17 @@ def process_app_idea(idea: str):
         )
 
 
-try:
-    idea = """
-Design a one-page responsive website for a graphic design studio called hueneu. The layout should be inspired by Studio Morii’s website—clean, minimal, scroll-based, and experience-led—but the tone, visuals, and experience must feel deeply personal and reflective of hueneu’s identity.
-✦ What hueneu is all about:
-Name meaning: “Hue” = creative color bursts, “Neu” = grounding neutrality
-Personality: Quiet but bold. Calm, mysterious, and a little playful. A studio that surprises with unexpected design moments (“Who Knew?”)
-Design style: Story-first, intentional, balanced, sometimes nostalgic, always evocative
-Voice: Warm, poetic, subtly humorous. Think soft sophistication—not cold minimalism
-✦ Structure & Content:
-1. Hero Section
-Animated hueneu logo reveal (just like Instagram’s first post)
-Tagline: “Where stories find their aesthetic.”
-Subtext: “Designs that whisper loud stories.”
-Smooth scroll-down indicator, playful but minimal
-2. The hueneu Story
-Short section about what hueneu means
-Emphasize the balance of color and calm
-Bring in the “Who Knew?” moment with a fun visual pop-out or scroll-triggered element
-3. What We Do
-5-6 core offerings presented with icons or line visuals:
-Branding
-Packaging
-Social Media
-Stationery
-Coffee Table Books
-Creative Projects
-Each with a playful, single-line microcopy (e.g., “Packaging, but make it poetic”)
-5. Why hueneu?
-Emotional brand pitch in poetic copy:
-“We don’t just design—we decode stories.”
-“Designs that speak quietly but stay with you.”
-Highlight calm, mystery, and balance.
-6. Let’s Work Together
-A contact form that feels like a note or letter
-Playful CTA button copy (e.g., “Let’s design your story”)
-Add Instagram: @hueneu_
-Optional: Embed a link to the services deck or a cute visual of the “Who Knew?” segment
-✦ Visual & Interaction Style:
-Color palette: Muted neutrals with occasional vibrant pops (inspired by brand’s “Hue + Neu” concept)
-Typography: Modern, elegant sans-serif with hints of personality—balance clarity and surprise
-Layout: Scroll-based storytelling. Minimal, but not cold.
-Effects: Subtle animations, hover reveals, scroll-triggered movement—especially for “Who Knew?”
-Mood: Cozy. Intimate. Intriguing. Experimental in a soft-spoken way.
-"""
-    process_app_idea(idea)
-
-finally:
+@atexit.register
+def cleanup():
+    print("Terminating Uvicorn subprocess... and exiting program")
+    process.terminate()
+    process.wait()
     state_manager = StateManager()
     repo_name = state_manager.get_work_dir()
     stop_server(repo_name)
-    print_error("Exited forcefully")
+
+
+idea = """
+Create web application for desktop and mobile with apartment listing with transparant character that people can use free of charge. Same easy of use as websites like AirBnB. Integrate Dutch point system for every apartment listing. Dutch point system assigns point and calculates maximum rent.
+"""
+process_app_idea(idea)

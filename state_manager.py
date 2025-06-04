@@ -15,6 +15,7 @@ class StateManager:
             "generated": [],
             "summary": [],
             "feedback_done": False,
+            "html": ""
         }
         self.load_state()
 
@@ -37,6 +38,10 @@ class StateManager:
 
     def update_plan(self, plan: str):
         self.state["plan"] = plan
+        self.save_state()
+
+    def update_html(self, plan: str):
+        self.state["html"] = plan
         self.save_state()
 
     def update_codebase(self, files: List[Dict[str, Any]]):
@@ -65,6 +70,9 @@ class StateManager:
 
     def get_plan(self) -> str:
         return self.state["plan"]
+    
+    def get_html(self) -> str:
+        return self.state["html"]
 
     def get_codebase(self) -> List[Dict[str, Any]]:
         return self.state["codebase"]
