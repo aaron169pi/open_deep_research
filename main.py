@@ -15,7 +15,6 @@ from tools import (
     batch_files,
     start_server,
     stop_server,
-    server_logs,
     rollback_server,
     check_website,
     ask_user_input_tool,
@@ -320,18 +319,17 @@ def process_app_idea(idea: str):
             print_warning("Checking for any errors...")
             time.sleep(30)
             link = server_res_obj["link"]
-            code, check_msg = check_website(link)
+            code, check_msg = check_website(link, repo_name)
             time.sleep(5)
-            error_res = server_logs(repo_name)
+            code, check_msg = check_website(link, repo_name)
 
-            if "success" not in error_res[:10] or code == 1:
+            if "success" not in check_msg or code == 1:
                 print_error(
-                    f"This is the server error message: \n\n{error_res}\n\nThis is server response: \n\n {check_msg}"
+                    f"This is the server error message: \n\n{check_msg}"
                 )
                 user_input = (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
-                    f"This was the error log: {error_res}"
-                    f"This was the server response: {check_msg}"
+                    f"This was the server log: {check_msg}"
                     "Fix this error properly and any errors that might propogate due to this error too"
                 )
             else:
@@ -342,12 +340,12 @@ def process_app_idea(idea: str):
                     "\n>>> Enter additional request for your project (or type 'exit'): "
                 ).strip()
 
-                error_res = server_logs(repo_name)
-                if "success" not in error_res:
-                    print_error(error_res)
+                code, check_msg = check_website(link, repo_name)
+                if "success" not in check_msg:
+                    print_error(check_msg)
                     user_input += (
                         "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
-                        f"This was the error log: {error_res}"
+                        f"This was the error log: {check_msg}"
                         "Fix this error properly and any errors that might propogate due to this error too"
                     )
 
@@ -475,6 +473,6 @@ def cleanup():
 
 
 idea = """
-Create web application for desktop and mobile with apartment listing with transparant character that people can use free of charge. Same easy of use as websites like AirBnB. Integrate Dutch point system for every apartment listing. Dutch point system assigns point and calculates maximum rent. Build it MERN Stack
+Create web application for playing games, it should have a minimun of 5 unique and fun games that i should be able to enjoy. Also make sure that you have a dark theme for my website lik I want it to look and function very cool. Also include some way to save and display scores of the top players.
 """
 process_app_idea(idea)

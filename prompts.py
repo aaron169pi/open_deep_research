@@ -66,12 +66,12 @@ Based on the features we've listed, these are the main functionalities I'm plann
 """
          
 html_planner_input = """
-  You are a coding assistant that helps to build an amazing prototype that is purely for design, not functionality. 
+  You are a coding assistant that helps to build an amazing prototype that is purely for design, not functionality based on the plan you have given me.
   You must respond ONLY with code — no explanations, no preambles.
 
   Use HTML, CSS, and JavaScript only. Ensure your output is clean, modern, and production-quality — it should awe top-tier developers.
 
-  Ensure CSS, JS is always inside HTLM files only, do not create extra files
+  Ensure CSS, JS is always inside HTML files only, do not create extra files
 
   If the design requires multiple pages (e.g., for navigation), output each file in the following format one after another:
 
@@ -140,13 +140,16 @@ Along with each path make sure you include it's group, for example a frontend fi
 # Prompt for code generation
 code_generation_prompt = """
 You are a senior software engineer and UI/UX expert generating **production-ready, visually stunning code**, **fully functional code** for a multi-file application that is end to end functional, in **batches**, based on a provided file structure and project plan.
+
 **Tool**
 If you're missing critical information such as environment variable keys, database credentials, third-party service choices, or any configuration where multiple valid options exist, use the `ask_user_input` tool to request clarification from the user before proceeding.
+
 **Inputs You'll Receive:**
 - Full list of intended file paths
 - Current batch of file paths to implement
 - Full project description and plan
 - (Optional) Summaries of previously generated files for context
+
 **Your Responsibilities:**
 1. Generate complete, correct code for the current batch only.
 2. Integrate seamlessly with previously generated code (if context provided).
@@ -161,6 +164,7 @@ If you're missing critical information such as environment variable keys, databa
    - A mandatory script that sets up and runs everything required for the project without any issues. The startup.sh must install dependencies, build the project (if needed), configure the environment, and handle any necessary permissions or checks. It should enable a clean, one-command launch of the entire application on a fresh system.
    - Make sure that the frontend or any interface through which user can interact with the application is **always** on port 9000, even if it's streamlit or nodejs frontend or regular html.
    - If there are frontend and backend then, do not segregate frontend/backend, instead build the frontend and serve the files over the backend so that ONLY 9000 port is used
+
 **Output Format:**
 Return reasoning in the `reasoning` key.
 This should follow these **strict rules**:
@@ -169,12 +173,7 @@ This should follow these **strict rules**:
 - It should tell the user *which part of the app you're implementing in this batch*.
 - Never mention filenames, technologies, tools, or setup steps.
 - Do not use multiple sentences or bullet points.
-Example outputs:
-- I’m building the About section that explains what this app does.
-- I’m working on the part where users can sign up and log in.
-- I’m setting up the page where users can upload resumes and see results.
-- I’m creating the main homepage interface that welcomes users.
-- I’m preparing the backend so the app can start processing user data.
+
 You must follow this style exactly. Avoid explanations. Only return the one-line reasoning.
 Return a raw JSON array in the items key.
 Each object must include:
@@ -202,6 +201,8 @@ For each file in the current batch:
 6. Handle edge cases where applicable
 7. Optimize code where possible without sacrificing clarity
 8. Ensure it integrates seamlessly with the context provided
+9. For deleted files, use: "content": "TERMINATE"
+
 
 Each item must follow this format:
 {

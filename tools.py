@@ -19,7 +19,11 @@ API_URL = os.getenv("API_URL")
 def save_files(code_data: str, base_dir: str) -> str:
     try:
         for item in code_data:
-            path = os.path.join(base_dir, item["file_path"])
+            # Remove leading slashes to ensure relative path
+            rel_path = item["file_path"].lstrip("/\\")
+            # Normalize and build final path
+            path = os.path.normpath(os.path.join(base_dir, rel_path))
+
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(item["content"])
@@ -29,14 +33,35 @@ def save_files(code_data: str, base_dir: str) -> str:
         return f"Error saving files: {str(e)}"
 
 
-def check_website(link: str) -> list:
+def check_website(link: str, dir_name: str) -> list:
     try:
-        response = requests.get(link)
-        return [0 if int(response.status_code) < 300 else 1, str(response)]
+        hit = requests.get(link)
+
+        response = requests.get(f"{API_URL}/logs/{dir_name}")
+        response.raise_for_status()
+
+        logs = response.json()["stdout"]
+        logs += "\n\n" + response.json()["stderr"]
+
+        return [
+            0 if int(hit.status_code) < 300 else 1,
+            (
+                str(f"These are the error logs: {logs}")
+                if int(hit.status_code) < 300
+                else "success"
+            ),
+        ]
     except Exception as e:
-        error_msg = f"Unexpected error: {str(e)}"
-        return [1, error_msg]
-    
+        response = requests.get(f"{API_URL}/logs/{dir_name}")
+        response.raise_for_status()
+
+        logs = response.json()["stdout"]
+        logs += "\n\n" + response.json()["stderr"]
+
+        print_error(str(e))
+
+        return [1, logs]
+
 
 def start_server(dir_name: str) -> object:
     try:
@@ -92,55 +117,58 @@ def start_server(dir_name: str) -> object:
         return error_msg
 
 
-def server_logs(dir_name: str) -> str:
-    try:
-        response = requests.get(f"{API_URL}/logs/{dir_name}")
-        response.raise_for_status()
+# def server_logs(dir_name: str) -> str:
+#     try:
+#         response = requests.get(f"{API_URL}/logs/{dir_name}")
+#         response.raise_for_status()
 
-        logs = response.json()["stdout"][-2000:]
-        logs += "\n\n" + response.json()["stderr"][-2000:]
+#         logs = response.json()["stdout"][-2000:]
+#         logs += "\n\n" + response.json()["stderr"][-2000:]
 
-        error_patterns = [
-            # Catch long 'Cannot find module ...' style blocks
-            r"(Error: Cannot find module [\s\S]+?)(?=\n\S|\Z)",
+#         error_patterns = [
+#             # Catch long 'Cannot find module ...' style blocks
+#             r"(Error: Cannot find module [\s\S]+?)(?=\n\S|\Z)",
 
-            # Python traceback
-            r"Traceback \(most recent call last\):[\s\S]+?(?=\n\S|\Z)",
+#             # Python traceback
+#             r"Traceback \(most recent call last\):[\s\S]+?(?=\n\S|\Z)",
 
-            # JavaScript/Node.js common error types
-            r"(?:Error|TypeError|ReferenceError|SyntaxError|RangeError|EvalError|URIError):[\s\S]+?(?=\n\S|\Z)",
-            
-            # npm errors (multi-line block or single line), case-insensitive
-            r"(?i)^npm (?:ERR!|error).*(?:\n(?!\s*$).+)*",  # multi-line block
-            r"(?i)^npm (?:ERR!|error).*$",  # single line like "npm error Missing script: ..."
-            
-            # Module not found specifically
-            r"(?i)^.*module not found:.*$",
+#             # JavaScript/Node.js common error types
+#             r"(?:Error|TypeError|ReferenceError|SyntaxError|RangeError|EvalError|URIError):[\s\S]+?(?=\n\S|\Z)",
 
-            # Missing script specifically
-            r"(?i)^.*missing script:.*$",
-            
-            # Shell/bash errors
-            r"(?i)^.*(?:command not found|no such file or directory|permission denied|not recognized as an internal or external command).*$",
-            
-            # Generic line-level fallback for anything with 'error'
-            r"(?i)^.*error.*$",
+#             # npm errors (multi-line block or single line), case-insensitive
+#             r"(?i)^npm (?:ERR!|error).*(?:\n(?!\s*$).+)*",  # multi-line block
+#             r"(?i)^npm (?:ERR!|error).*$",  # single line like "npm error Missing script: ..."
 
-            # sh: style errors like "sh: 1: react-scripts: not found"
-            r"^sh: \d+: .+$",
-        ]
+#             # Module not found specifically
+#             r"(?i)^.*module not found:.*$",
 
-        errors = []
-        for pattern in error_patterns:
-            matches = re.findall(pattern, logs, re.MULTILINE | re.DOTALL)
-            errors.extend(m.strip() for m in matches)
+#             # Missing script specifically
+#             r"(?i)^.*missing script:.*$",
 
-        errors = list(dict.fromkeys(errors))
+#             # Shell/bash errors
+#             r"(?i)^.*(?:command not found|no such file or directory|permission denied|not recognized as an internal or external command).*$",
 
-        return "\n\n".join(errors) if errors else f"success: {errors}"
-    except requests.exceptions.RequestException as e:
-        return f"Failed to fetch logs: {e}"
-       
+#             # Generic line-level fallback for anything with 'error'
+#             r"(?i)^.*error.*$",
+
+#             # React "Could not find a required file" block (3 lines)
+#             r"Could not find a required file\.\n(?: {2}.+\n){2}",
+
+#             # sh: style errors like "sh: 1: react-scripts: not found"
+#             r"^sh: \d+: .+$",
+#         ]
+
+#         errors = []
+#         for pattern in error_patterns:
+#             matches = re.findall(pattern, logs, re.MULTILINE | re.DOTALL)
+#             errors.extend(m.strip() for m in matches)
+
+#         errors = list(dict.fromkeys(errors))
+
+#         return "\n\n".join(errors) if errors else f"success: {errors}"
+#     except requests.exceptions.RequestException as e:
+#         return f"Failed to fetch logs: {e}"
+
 
 def rollback_server(dir_name: str, commit_id: str) -> str:
     try:
