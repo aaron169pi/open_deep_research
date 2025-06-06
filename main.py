@@ -89,39 +89,51 @@ def process_app_idea(idea: str):
         state_manager.update_plan(plan)
 
     plan = state_manager.get_plan()
-    print(plan)
     if not state_manager.is_feedback_done():
         print(f"\n Initial Project Plan:\n{plan}\n")
-        if not state_manager.get_html():
-            planner_input = html_planner_input.format(prompt=idea)
-            preview = code_model.invoke(
-                html_planner_prompt.format(plan=plan, input=planner_input)
-            )
-            html_data = preview.content
-        else:
-            html_data = state_manager.get_html()
+        
+        skip = True
+        html_data = "No html data is currently generated, user had some issue with the plan"
 
-        response = requests.post(
-            preview_url,
-            data=html_data.encode("utf-8"),
-            headers={"Content-Type": "text/plain"},
-        )
-        print_info(f"You can view the preview at {preview_url}")
+        if not state_manager.get_html():
+            plan_feedback = input("Do you have any changes for the plan? (or type 'no')\n>>>")
+            if plan_feedback in {"no", "n", ""}:
+                print_info(" No changes made to the plan. Proceeding with implementation.")
+                if not state_manager.get_html():
+                    planner_input = html_planner_input.format(prompt=idea)
+                    preview = code_model.invoke(
+                        html_planner_prompt.format(plan=plan, input=planner_input)
+                    )
+                    html_data = preview.content
+                else:
+                    html_data = state_manager.get_html()
+
+                response = requests.post(
+                    preview_url,
+                    data=html_data.encode("utf-8"),
+                    headers={"Content-Type": "text/plain"},
+                )
+                print_info(f"You can view the preview at {preview_url}")
+                skip = False
+        else:
+            skip = False     
 
         while True:
-            winsound.Beep(500, 500)
-            plan_feedback = input("Do you have any changes? (or type 'no')\n>>>")
+            if not skip:
+                winsound.Beep(500, 500)
 
-            # Check if all values are "no" or empty
-            if plan_feedback in {"no", "n", ""}:
-                print_info(
-                    " No changes made to the plan. Proceeding with implementation."
-                )
-                state_manager.update_html(html_data)
-                state_manager.update_plan(plan)
-                state_manager.mark_feedback_done()
-                print("Feedback marked as done. Exiting feedback loop.")
-                break  # This break is inside the while True loop, so it's valid
+                plan_feedback = input("Do you have any changes? (or type 'no')\n>>>")
+
+                # Check if all values are "no" or empty
+                if plan_feedback in {"no", "n", ""}:
+                    print_info(
+                        " No changes made to the plan. Proceeding with implementation."
+                    )
+                    state_manager.update_html(html_data)
+                    state_manager.update_plan(plan)
+                    state_manager.mark_feedback_done()
+                    print("Feedback marked as done. Exiting feedback loop.")
+                    break  # This break is inside the while True loop, so it's valid
 
             refined_plan_prompt = f"""
         Here is the original project plan:
@@ -149,9 +161,12 @@ def process_app_idea(idea: str):
         After that, return the revised project plan in the **exact same markdown format** as the original.
         Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
         """
+            
             refined_plan_response = planner_model.invoke(refined_plan_prompt)
             refined_plan = refined_plan_response.content
             print(f"\n Refined Plan:\n{refined_plan}")
+
+            skip = False
 
             planner_input = html_planner_input.format(prompt=idea)
             planner_update_input = html_planner_input.format(prompt=plan_feedback)
@@ -324,9 +339,7 @@ def process_app_idea(idea: str):
             code, check_msg = check_website(link, repo_name)
 
             if "success" not in check_msg or code == 1:
-                print_error(
-                    f"This is the server error message: \n\n{check_msg}"
-                )
+                print_error(f"This is the server error message: \n\n{check_msg}")
                 user_input = (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
                     f"This was the server log: {check_msg}"

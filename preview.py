@@ -1,9 +1,13 @@
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+import json
+
 
 app = FastAPI()
 
-html_content = """
+# Placeholder HTML content
+placeholder = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -23,7 +27,6 @@ html_content = """
       text-align: center;
       animation: fadeIn 1.2s ease-in-out;
     }
-
     h1 {
       font-size: 2.5rem;
       background: rgba(255, 255, 255, 0.1);
@@ -32,16 +35,9 @@ html_content = """
       box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
       backdrop-filter: blur(6px);
     }
-
     @keyframes fadeIn {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -51,15 +47,22 @@ html_content = """
 </html>
 """
 
+# Store the uploaded content, or None if nothing posted yet
+latest_html_text: str | None = None
+
 
 @app.get("/", response_class=HTMLResponse)
-async def serve_html():
-    return html_content
+async def serve_frontend():
+    with open("index.html", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read())
 
+@app.get("/data", response_class=PlainTextResponse)
+async def get_latest_html():
+    return latest_html_text or placeholder
 
 @app.post("/")
 async def update_html(request: Request):
-    global html_content
-    html_content = await request.body()
-    html_content = html_content.decode("utf-8")
+    global latest_html_text
+    html_text = await request.body()
+    latest_html_text = html_text.decode("utf-8")
     return {"status": "HTML updated successfully"}

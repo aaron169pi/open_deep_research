@@ -73,10 +73,13 @@ html_planner_input = """
 
   Ensure CSS, JS is always inside HTML files only, do not create extra files
 
-  If the design requires multiple pages (e.g., for navigation), output each file in the following format one after another:
+  If the design requires multiple pages (e.g., for navigation), output each file in the following format one after another and that user can actually scroll down and see one page after another:
 
-  [FILE: filename.html]
-  <entire contents of that file>
+  [FILE: filename_1.html]
+  <entire contents of that filename_1>
+
+  [FILE: filename_2.html]
+  <entire contents of that filename_2>
 
   Repeat for all files (e.g., index.html, about.html, etc). Do not include explanations or anything outside this format.
 
@@ -128,10 +131,10 @@ Your output must represent a runnable, testable, and clean MVP with modern conve
 - Use clean, minimal file organization that balances clarity with future scalability
 
 ### Avoid:
-- Do not include placeholder files or folders that aren't used yet
-- Do not generate mock assets or static files unless used directly in the code
+- Never include placeholder files or folders that aren't used yet
+- Do not generate mock assets or static files (like favicon.ico or other .png files) unless used directly in the code
 - Do not add extra layers of folders unless logically necessary
-- Do NOT add .gitignore files ever 
+- Do NOT add .gitignore files ever
 
 
 Along with each path make sure you include it's group, for example a frontend file would be grouped under the frontend group, a backend file under the backend group and so on, use your own expertise to group

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>HTML with Tabs</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: sans-serif;
+      background: #f5f5f5;
+    }
+
+    #top-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.5rem 1rem;
+      background: #fff;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #renderMode {
+      padding: 0.4rem;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    #tabs {
+      display: flex;
+      overflow-x: auto;
+      gap: 4px;
+      flex: 1;
+    }
+
+    .tab {
+      padding: 0.4rem 0.75rem;
+      cursor: pointer;
+      border: 1px solid #ccc;
+      border-bottom: none;
+      background: #eee;
+      border-radius: 6px 6px 0 0;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+
+    .tab.active {
+      background: white;
+      border-color: #ccc #ccc white;
+      font-weight: 700;
+      color: #0057e7;
+    }
+
+    #preview-container {
+      height: calc(100% - 52px);
+      padding: 0;
+    }
+
+    #preview {
+      width: 100%;
+      height: 100%;
+      border: none;
+      overflow: auto;
+      background: white;
+      padding: 1rem;
+    }
+
+    pre {
+      margin: 0;
+    }
+  </style>
+</head>
+<body>
+  <div id="top-bar">
+    <div id="tabs"></div>
+    <select id="renderMode" onchange="updatePreview()">
+      <option value="html">Render HTML</option>
+      <option value="code">Show as Code</option>
+      <option value="text">Plain Text</option>
+    </select>
+  </div>
+
+  <div id="preview-container">
+    <div id="preview"></div>
+  </div>
+
+  <script>
+    let pages = {};
+    let currentFile = "index.html";
+    let iframe = null;
+
+    function createTab(filename) {
+      if (document.querySelector(`.tab[data-file="${filename}"]`)) return;
+
+      const tab = document.createElement("button");
+      tab.classList.add("tab");
+      tab.dataset.file = filename;
+      tab.textContent = filename;
+      tab.onclick = () => setActiveTab(filename);
+      document.getElementById("tabs").appendChild(tab);
+    }
+
+    function setActiveTab(filename) {
+      currentFile = filename;
+      document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.file === filename);
+      });
+      updatePreview();
+    }
+
+    function updatePreview() {
+      const mode = document.getElementById("renderMode").value;
+      const preview = document.getElementById("preview");
+      const content = pages[currentFile] || "";
+
+      if (mode === "html") {
+        if (!iframe) {
+          iframe = document.createElement("iframe");
+          iframe.style.width = "100%";
+          iframe.style.height = "100%";
+          iframe.style.border = "none";
+          preview.innerHTML = "";
+          preview.appendChild(iframe);
+        }
+
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        doc.open();
+        doc.write(content);
+        doc.close();
+      } else {
+        if (iframe) {
+          iframe.remove();
+          iframe = null;
+        }
+
+        if (mode === "code") {
+          preview.innerHTML = `<pre><code>${escapeHTML(content)}</code></pre>`;
+        } else {
+          preview.textContent = content;
+        }
+      }
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+
+    function parseFullRawData(rawData) {
+      pages = {};
+      currentFile = null;
+
+      const fileRegex = /\[FILE:\s*([^\]]+)\s*\]\s*([\s\S]*?)(?=\[FILE:|$)/g;
+      let match;
+      while ((match = fileRegex.exec(rawData)) !== null) {
+        const filename = match[1].trim();
+        let content = match[2];
+
+        content = content.replace(/^```(?:html)?\n?/, "").replace(/```$/, "");
+        content = content.replace(/\\n/g, "\n");
+
+        pages[filename] = content;
+      }
+
+      if (Object.keys(pages).length === 0) {
+        pages["index.html"] = "<h1>No files found in input</h1>";
+      }
+
+      document.getElementById("tabs").innerHTML = "";
+      Object.keys(pages).forEach((filename, i) => {
+        createTab(filename);
+        if (i === 0) setActiveTab(filename);
+      });
+
+      updatePreview();
+    }
+
+    async function startFullText() {
+      pages = {};
+      currentFile = "index.html";
+      document.getElementById("tabs").innerHTML = "";
+      document.getElementById("preview").innerHTML = "";
+
+      try {
+        const response = await fetch("/data");
+        const rawText = await response.text();
+        parseFullRawData(rawText);
+      } catch (err) {
+        console.error(err);
+        alert("Error generating UI. See console.");
+      }
+    }
+
+    startFullText();
+  </script>
+</body>
+</html>
