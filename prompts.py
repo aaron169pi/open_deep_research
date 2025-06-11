@@ -1,5 +1,281 @@
 from langchain_core.prompts import ChatPromptTemplate
 
+
+# classifier_prompt = """
+
+# ## System Instructions
+# You are an expert application classifier for a Code Assistant platform. Your task is to analyze user idea and classify them into exactly one of three predefined application categories.
+
+# here is user idea:
+# {idea}
+
+
+# ## Classification Categories
+
+# ### 1. Modern Web App
+# - **Technology Stack**: React frontend + Node.js backend
+# - **Characteristics**: Full-stack application, rich user experience, complex interactions, scalable architecture
+# - **Use Cases**: E-commerce platforms, social media apps, dashboards, SaaS applications, complex business applications
+
+# ### 2. Streamlit App
+# - **Technology Stack**: Python with Streamlit framework
+# - **Characteristics**: Rapid prototyping, data-focused applications, interactive widgets, simple deployment
+# - **Use Cases**: Data analysis tools, ML model demos, quick prototypes, internal tools, proof-of-concepts
+
+# ### 3. Web App (Python Backend)
+# - **Technology Stack**: Flask/FastAPI backend + HTML/React frontend
+# - **Characteristics**: API-first approach, microservices architecture, flexible frontend options
+# - **Use Cases**: REST APIs, microservices, data processing applications, backend services with custom frontends
+
+# ## Classification Rules
+
+# 1. **Explicit Category Mention**: If user explicitly mentions a category, classify accordingly ONLY if it matches the defined categories above
+# 2. **Implicit Classification**: Analyze the query context, complexity, and requirements to determine the most suitable category
+# 3. **Default Behavior**: Every query MUST be classified into one of the three categories - no exceptions
+# 4. **Complexity Assessment**: Consider the scale, user base, and technical requirements
+
+# ## Input Analysis Framework
+
+# Analyze the user input for these key indicators:
+
+# **For Modern Web App:**
+# - Keywords: "full-stack", "complex", "scalable", "production-ready", "enterprise"
+# - Requirements: User authentication, real-time features, complex state management
+# - Scale: Multi-user, high traffic, commercial applications
+
+# **For Streamlit App:**
+# - Keywords: "prototype", "quick", "demo", "data", "analysis", "visualization"
+# - Requirements: Rapid development, data exploration, simple sharing
+# - Scale: Personal projects, internal tools, proof-of-concepts
+
+# **For Web App (Python Backend):**
+# - Keywords: "API", "backend", "microservice", "REST", "database"
+# - Requirements: API development, data processing, custom frontend flexibility
+# - Scale: Service-oriented architecture, API-first approach
+
+# ## Output Format
+
+# Provide your response in the following JSON structure:
+
+# ```json
+# {{
+#   "app_type": "[Modern Web App|Streamlit App|Web App]"
+# }}
+# ```
+
+# ## Examples
+
+# ### Example 1: E-commerce Platform
+# **User Query**: "I want to build an online shopping platform with user accounts, payment processing, and inventory management"
+
+# **Expected Output**:
+# ```json
+# {{
+#   "app_type": "Modern Web App"
+# }}
+# ```
+
+# ### Example 2: Data Analysis Tool
+# **User Query**: "Create a tool to analyze CSV files and show interactive charts"
+
+# **Expected Output**:
+# ```json
+# {{
+#   "app_type": "Streamlit App"
+# }}
+# ```
+
+# ### Example 3: API Service
+# **User Query**: "Build a REST API for managing customer data with a simple admin interface"
+
+# **Expected Output**:
+# ```json
+# {{
+#   "app_type": "Web App"
+# }}
+# ```
+
+# ## Additional Guidelines
+
+# - **Ambiguous Queries**: If the query is ambiguous, choose the category that best matches the implied complexity and use case
+# - **Multiple Possibilities**: Select the most appropriate category based on the primary use case and technical requirements
+# - **User Expertise**: Consider the implied technical level - beginners often benefit from Streamlit, while experienced developers may prefer Modern Web App or Web App categories
+# - **Time Constraints**: Quick prototypes → Streamlit App, Production applications → Modern Web App, API services → Web App
+
+# ## Final Instructions
+
+# 1. Always provide a classification - never respond with "uncertain" or "multiple categories"
+# 2. Be decisive but explain your reasoning clearly
+# 3. Consider the user's implied needs and technical requirements
+# 4. If user specifies a category explicitly, validate it matches our definitions before accepting
+# 5. Focus on the primary use case when multiple features are mentioned
+
+# """
+
+
+classifier_prompt = """
+## System Instructions
+You are an expert application classifier for a Code Assistant platform. Your task is to analyze user idea and classify them into exactly one of three predefined application categories.
+
+Here is the user idea:
+{idea}
+
+## Classification Categories
+
+### 1. Modern Web App
+- **Technology Stack**: React frontend + Node.js backend
+- **Characteristics**: Full-stack application, rich user experience, complex interactions, scalable architecture
+- **Use Cases**: E-commerce platforms, social media apps, dashboards, SaaS applications, complex business applications
+
+### 2. Streamlit App
+- **Technology Stack**: Python with Streamlit framework
+- **Characteristics**: Single-page applications, built-in UI components, automatic reactivity, no separate frontend/backend
+- **Primary Purpose**: Data exploration, visualization, ML model demonstrations, interactive dashboards
+- **Use Cases**: Data analysis tools, ML model demos, scientific computing apps, business intelligence dashboards, research tools
+- **Key Differentiators**: 
+  - All-in-one Python solution (no separate frontend)
+  - Built-in widgets and charts
+  - Automatic UI generation from Python code
+  - Perfect for data scientists and analysts
+  - No API endpoints needed
+
+### 3. Web App (Python Backend)
+- **Technology Stack**: Flask/FastAPI backend + HTML/React frontend (separate frontend and backend)
+- **Characteristics**: API-first architecture, separation of concerns, scalable backend services, custom frontend design
+- **Primary Purpose**: Building scalable web services, APIs, and applications with custom user interfaces
+- **Use Cases**: REST APIs, microservices, e-commerce backends, user management systems, database-driven applications, custom web applications
+- **Key Differentiators**:
+  - Separate backend and frontend architecture
+  - Custom API endpoints and routes
+  - Database integration and ORM usage
+  - Authentication and authorization systems
+  - Custom frontend design flexibility
+  - Suitable for production web services
+
+## Critical Decision Logic for Python Applications
+
+**When user mentions "Python" - Apply this decision tree:**
+
+1. **If the request involves data visualization, analytics, or ML demos** → Streamlit App
+2. **If the request mentions APIs, routes, endpoints, or database operations** → Web App
+3. **If the request mentions separate frontend/backend or custom UI design** → Web App
+4. **If the request is about interactive dashboards or data exploration** → Streamlit App
+5. **If the request mentions user authentication, registration, or multi-user systems** → Web App
+6. **If the request is about "building a website" with custom pages** → Web App
+7. **If the request is about "creating a tool" for data analysis** → Streamlit App
+
+**Python Bias Resolution Rules:**
+- **"Build a Python web app"** → Default to Web App (unless explicitly about data/analytics)
+- **"Python application for data"** → Streamlit App
+- **"Python backend for my website"** → Web App
+- **"Python dashboard"** → Streamlit App
+- **"Python API service"** → Web App
+
+## Input Analysis Framework
+
+Analyze the user input for these key indicators:
+
+**For Modern Web App:**
+- Keywords: "full-stack", "complex", "scalable", "production-ready", "enterprise"
+- Requirements: User authentication, real-time features, complex state management
+- Scale: Multi-user, high traffic, commercial applications
+
+**For Streamlit App:**
+- Keywords: "dashboard", "data visualization", "ML model demo", "analytics", "charts", "graphs", "explore data"
+- Requirements: Interactive data exploration, built-in widgets, single-page experience
+- Architecture: All-in-one Python solution, no separate API needed
+- User Base: Data scientists, analysts, researchers
+- Deployment: Simple sharing, internal tools
+
+**For Web App (Python Backend):**
+- Keywords: "API", "backend service", "database", "user management", "authentication", "routes", "endpoints"
+- Requirements: Custom APIs, database operations, user systems, scalable architecture
+- Architecture: Separate frontend and backend, client-server model
+- User Base: Web developers, software engineers, production applications
+- Deployment: Production-ready web services, multiple environments
+
+## Output Format
+
+Provide your response in the following JSON structure:
+
+```json
+{{
+  "app_type": "[Modern Web App|Streamlit App|Web App]"
+}}
+```
+
+## Examples
+
+### Example 1: E-commerce Platform
+**User Query**: "I want to build an online shopping platform with user accounts, payment processing, and inventory management"
+
+**Expected Output**:
+```json
+{{
+  "app_type": "Modern Web App"
+}}
+```
+
+### Example 2: Data Analysis Tool
+**User Query**: "Create a tool to analyze CSV files and show interactive charts"
+
+**Expected Output**:
+```json
+{{
+  "app_type": "Streamlit App"
+}}
+```
+
+### Example 3: API Service
+**User Query**: "Build a REST API for managing customer data with a simple admin interface"
+
+**Expected Output**:
+```json
+{{
+  "app_type": "Web App"
+}}
+```
+
+### Example 4: Python Web Application (Disambiguation)
+**User Query**: "I want to build a Python web application for managing my bookstore inventory"
+
+**Expected Output**:
+```json
+{{
+  "app_type": "Web App"
+}}
+```
+
+### Example 5: Python Data Application (Disambiguation)
+**User Query**: "Create a Python application to analyze sales data and show trends"
+
+**Expected Output**:
+```json
+{{
+  "app_type": "Streamlit App"
+}}
+```
+
+## Additional Guidelines
+
+- **Python Mention Analysis**: Don't automatically default to Streamlit just because Python is mentioned - analyze the actual requirements
+- **Architecture Signals**: Look for clues about whether they need a unified app (Streamlit) or separated concerns (Web App)
+- **User Intent**: Data exploration/visualization = Streamlit, Web services/custom apps = Web App
+- **Ambiguous Queries**: When uncertain between Streamlit and Web App, prefer Web App for general "web applications" and Streamlit only for clear data/analytics use cases
+- **Multiple Possibilities**: Select the most appropriate category based on the primary use case and architectural requirements
+- **User Expertise**: Consider the implied technical level - data scientists often benefit from Streamlit, while web developers may prefer Web App categories
+- **Time Constraints**: Quick data prototypes → Streamlit App, Custom web applications → Web App, Production web services → Web App
+
+## Final Instructions
+
+1. Always provide a classification - never respond with "uncertain" or "multiple categories"
+2. Be decisive but analyze the core requirements carefully
+3. Consider the user's implied needs and architectural requirements
+4. If user specifies a category explicitly, validate it matches our definitions before accepting
+5. Focus on the primary use case when multiple features are mentioned
+6. **Critical**: When Python is mentioned, use the decision tree above to avoid bias toward Streamlit
+"""
+
 PLANNER_PROMPT = """
 You are a senior software architect and UX strategist tasked with planning a Minimum Viable Product (MVP) that delivers exceptional user experience and modern design standards based strictly on the user's request.
 Always, start your answer with: inside <thinking> </thinking> tags
@@ -82,7 +358,7 @@ html_planner_input = """
   <entire contents of that filename_2>
 
   Repeat for all files (e.g., index.html, about.html, etc). Do not include explanations or anything outside this format.
-
+  Do this for all files.
   You are not allowed to talk or introduce the output — just stream the raw code.
 
   User request:
@@ -101,7 +377,7 @@ Send your report in the report key
 
 # Prompt for generating project plans
 planner_prompt = ChatPromptTemplate.from_messages(
-    [("system", PLANNER_PROMPT), ("human", "{idea}")]
+    [("system", PLANNER_PROMPT), ("human", "{idea},Here is application type: {app_type},here is the app type description: {app_type_description}")]
 )
 
 html_planner_prompt = ChatPromptTemplate.from_messages(

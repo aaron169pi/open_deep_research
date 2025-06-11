@@ -2,6 +2,10 @@ from pydantic import BaseModel
 from typing import List
 
 
+class AppTypeResponse(BaseModel):
+    app_type: str
+
+
 class FileGeneration(BaseModel):
     file_path: str
     content: str

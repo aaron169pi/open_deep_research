@@ -143,7 +143,7 @@ class DockerAppManager:
                 return 6, "No EXPOSED port found in Dockerfile."
 
             try:
-                self.client.containers.run(
+                self.client.containers.run( 
                     image=self.image_name,
                     name=self.container_name,
                     ports={f"{container_port}/tcp": self.host_port},

@@ -20,6 +20,7 @@ from tools import (
     ask_user_input_tool,
 )
 from prompts import (
+    classifier_prompt,
     planner_prompt,
     code_generation_prompt,
     code_validation_prompt,
@@ -32,6 +33,7 @@ from prompts import (
 )
 from state_manager import StateManager
 from response_models import (
+    AppTypeResponse,
     FileStructureList,
     FileGenerationList,
     FileChangesList,
@@ -53,7 +55,7 @@ preview_url = os.getenv("PREVIEW_URL")
 
 # Start uvicorn as a subprocess with no stdio
 process = subprocess.Popen(
-    ["uvicorn", "preview:app", "--host", "0.0.0.0", "--port", "7000"],
+    ["python","-m","uvicorn", "preview:app", "--host", "0.0.0.0", "--port", "7000"],
     stdout=subprocess.DEVNULL,
     stderr=subprocess.DEVNULL,
     stdin=subprocess.DEVNULL,
@@ -62,6 +64,11 @@ process = subprocess.Popen(
 
 def init_models():
     # planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
+    
+    classifier_model = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash-preview-04-17",
+        max_tokens=8000,
+    )
     planner_model = ChatGoogleGenerativeAI(
         model="gemini-2.5-flash-preview-04-17",
         max_tokens=8000,
@@ -75,130 +82,186 @@ def init_models():
         max_tokens=25000,
     )
 
-    return planner_model, code_model, structure_model
+    return classifier_model,planner_model, code_model, structure_model
 
 
-def process_app_idea(idea: str):
-    planner_model, code_model, structure_model = init_models()
+def classify_app_type(idea: str) -> str:
+    classifier_model, _, _, _ = init_models()
+    classifier_agent = create_react_agent(
+            model=classifier_model,
+            tools=[],
+            prompt=classifier_prompt,
+            response_format=AppTypeResponse,
+            )
+    response = classifier_agent.invoke({
+    "messages": [{"role": "user", "content": idea}]
+})
+    print(response)
+    app_type = response["structured_response"].app_type
+    print_info(f"Classified app type: {app_type}")
+    
+    
+    category_map = {
+        "Modern Web App": "modern_web_app",
+        "Streamlit App": "interactive_data_app",
+        "Web App": "web_app_python",
+    }
+    return category_map.get(app_type)
+    
+
+
+def process_app_idea(idea: str, app_type: str = "auto"):
+    classifier_model, planner_model, code_model, structure_model = init_models()
     state_manager = StateManager()
 
+
+    valid_types = {"modern_web_app", "interactive_data_app", "web_app_python"}
+    if app_type not in valid_types:
+        print_info("🧠 Classifying app type automatically...")
+        app_type = classify_app_type(idea)
+        print_info(f"✅ Auto-classified as: {app_type}")
+    else:
+        print_info(f"✅ User selected app type: {app_type}")
+
+    APP_TYPE_DESCRIPTIONS = {
+    "modern_web_app": "A full-stack web application built with React frontend and Node.js backend, designed for complex user interactions, scalable architecture, and rich user experiences. Ideal for production-ready applications like e-commerce platforms, SaaS products, social media apps, and enterprise business applications that require advanced features like real-time updates, user authentication, and sophisticated state management.",
+    
+    "interactive_data_app": "A single-page Python application using the Streamlit framework for rapid prototyping and data-focused applications. Features built-in UI components, automatic reactivity, and seamless integration with data science libraries. Perfect for creating interactive dashboards, data visualization tools, ML model demonstrations, analytics platforms, and research tools that require quick development and easy sharing without separate frontend/backend architecture.",
+    
+    "web_app_python": "A web application with Python backend (Flask/FastAPI) and custom frontend (HTML/React), following API-first architecture with clear separation of concerns. Designed for building scalable web services, REST APIs, microservices, and custom web applications that require database integration, user management systems, authentication, and flexible frontend design options suitable for production environments."
+}
+    app_type_description = APP_TYPE_DESCRIPTIONS.get(app_type, "No description available.")
+    print_info(f"✅ App Type Description:\n{app_type_description}")
+
+    app_type = app_type
     # Check if a plan already exists
     if not state_manager.get_plan():
-        plan_response = planner_model.invoke(planner_prompt.format(idea=idea))
+        plan_response = planner_model.invoke(planner_prompt.format(idea=idea, app_type=app_type, app_type_description=app_type_description))
         plan = plan_response.content
         state_manager.update_plan(plan)
 
     plan = state_manager.get_plan()
-    if not state_manager.is_feedback_done():
-        print(f"\n Initial Project Plan:\n{plan}\n")
-        
-        skip = True
-        html_data = "No html data is currently generated, user had some issue with the plan"
+    print(f"\nProject Plan:\n{plan}\n")
 
-        if not state_manager.get_html():
-            plan_feedback = input("Do you have any changes for the plan? (or type 'no')\n>>>")
-            if plan_feedback in {"no", "n", ""}:
-                print_info(" No changes made to the plan. Proceeding with implementation.")
-                if not state_manager.get_html():
-                    planner_input = html_planner_input.format(prompt=idea)
-                    preview = code_model.invoke(
-                        html_planner_prompt.format(plan=plan, input=planner_input)
+    if app_type == "interactive_data_app":
+        print_info("📊 Streamlit app detected - skipping HTML preview generation")
+        state_manager.mark_feedback_done()
+        # Set empty HTML data for consistency
+        state_manager.update_html("<!-- Streamlit app - no HTML preview needed -->")
+    else:
+        if not state_manager.is_feedback_done():
+            print(f"\n Initial Project Plan:\n{plan}\n")
+            
+            skip = True
+            html_data = "No html data is currently generated, user had some issue with the plan"
+
+            if not state_manager.get_html():
+                plan_feedback = input("Do you have any changes for the plan? (or type 'no')\n>>>")
+                if plan_feedback in {"no", "n", ""}:
+                    print_info(" No changes made to the plan. Proceeding with implementation.")
+                    if not state_manager.get_html():
+                        planner_input = html_planner_input.format(prompt=idea)
+                        preview = code_model.invoke(
+                            html_planner_prompt.format(plan=plan, input=planner_input)
+                        )
+                        html_data = preview.content
+                    else:
+                        html_data = state_manager.get_html()
+
+                    response = requests.post(
+                        preview_url,
+                        data=html_data.encode("utf-8"),
+                        headers={"Content-Type": "text/plain"},
                     )
-                    html_data = preview.content
-                else:
-                    html_data = state_manager.get_html()
+                    print_info(f"You can view the preview at {preview_url}")
+                    skip = False
+            else:
+                skip = False     
 
+            while True:
+                if not skip:
+                    winsound.Beep(500, 500)
+
+                    plan_feedback = input("Do you have any changes? (or type 'no')\n>>>")
+
+                    # Check if all values are "no" or empty
+                    if plan_feedback in {"no", "n", ""}:
+                        print_info(
+                            " No changes made to the plan. Proceeding with implementation."
+                        )
+                        state_manager.update_html(html_data)
+                        state_manager.update_plan(plan)
+                        state_manager.mark_feedback_done()
+                        print("Feedback marked as done. Exiting feedback loop.")
+                        break  # This break is inside the while True loop, so it's valid
+
+                refined_plan_prompt = f"""
+            Here is the original project plan:
+
+            {plan}
+            The user has provided the following feedback.
+            {plan_feedback}
+            A preview using HTML was also generate and these are the contents for reference
+            {html_data}
+            If the user's query is purely regarding makes no actual change to the plan then give back the old plan itself
+
+            First understand the original plan and make the changes accordingly.
+            Your task is to revise the original plan by merging the user's feedback carefully:
+            - Do *not* discard any original information unless the user clearly says so.
+            - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
+            - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
+            - If user feedback is to add new page and update the page structure, do so without removing existing pages and their content.
+            🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
+            - What the user's feedback was,
+            - What changes you made based on it,
+            - And how those changes respect and enhance the original plan.
+
+            Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
+            Your explanation should flow like human reasoning — not in list format or bullet points.
+            After that, return the revised project plan in the **exact same markdown format** as the original.
+            Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
+            """
+                
+                refined_plan_response = planner_model.invoke(refined_plan_prompt)
+                refined_plan = refined_plan_response.content
+                print(f"\n Refined Plan:\n{refined_plan}")
+
+                skip = False
+
+                planner_input = html_planner_input.format(prompt=idea)
+                planner_update_input = html_planner_input.format(prompt=plan_feedback)
+                preview = code_model.invoke(
+                    html_update_planner_prompt.format(
+                        plan=plan,
+                        input=planner_input,
+                        html_code=html_data,
+                        refined_plan=refined_plan,
+                        user_suggestion=planner_update_input,
+                    )
+                )
+                html_data = preview.content
+                print(f"\n HTML Preview:\n{html_data}\n")
+                plan = refined_plan
                 response = requests.post(
                     preview_url,
                     data=html_data.encode("utf-8"),
                     headers={"Content-Type": "text/plain"},
                 )
                 print_info(f"You can view the preview at {preview_url}")
-                skip = False
-        else:
-            skip = False     
 
-        while True:
-            if not skip:
-                winsound.Beep(500, 500)
+                state_manager.update_plan(plan)
+                state_manager.update_html(html_data)
+                state_manager.mark_feedback_done()
 
-                plan_feedback = input("Do you have any changes? (or type 'no')\n>>>")
-
-                # Check if all values are "no" or empty
-                if plan_feedback in {"no", "n", ""}:
-                    print_info(
-                        " No changes made to the plan. Proceeding with implementation."
-                    )
-                    state_manager.update_html(html_data)
-                    state_manager.update_plan(plan)
-                    state_manager.mark_feedback_done()
-                    print("Feedback marked as done. Exiting feedback loop.")
-                    break  # This break is inside the while True loop, so it's valid
-
-            refined_plan_prompt = f"""
-        Here is the original project plan:
-
-        {plan}
-        The user has provided the following feedback.
-        {plan_feedback}
-        A preview using HTML was also generate and these are the contents for reference
-        {html_data}
-        If the user's query is purely regarding the html and makes no actual change to the plan then give back the old plan itself
-
-        First understand the original plan and make the changes accordingly.
-        Your task is to revise the original plan by merging the user's feedback carefully:
-        - Do *not* discard any original information unless the user clearly says so.
-        - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
-        - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
-        
-        🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
-        - What the user's feedback was,
-        - What changes you made based on it,
-        - And how those changes respect and enhance the original plan.
-
-        Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
-        Your explanation should flow like human reasoning — not in list format or bullet points.
-        After that, return the revised project plan in the **exact same markdown format** as the original.
-        Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
-        """
-            
-            refined_plan_response = planner_model.invoke(refined_plan_prompt)
-            refined_plan = refined_plan_response.content
-            print(f"\n Refined Plan:\n{refined_plan}")
-
-            skip = False
-
-            planner_input = html_planner_input.format(prompt=idea)
-            planner_update_input = html_planner_input.format(prompt=plan_feedback)
-            preview = code_model.invoke(
-                html_update_planner_prompt.format(
-                    plan=plan,
-                    input=planner_input,
-                    html_code=html_data,
-                    refined_plan=refined_plan,
-                    user_suggestion=planner_update_input,
-                )
-            )
-            html_data = preview.content
-            plan = refined_plan
-            response = requests.post(
-                preview_url,
-                data=html_data.encode("utf-8"),
-                headers={"Content-Type": "text/plain"},
-            )
-            print_info(f"You can view the preview at {preview_url}")
-
-            state_manager.update_plan(plan)
-            state_manager.update_html(html_data)
-            state_manager.mark_feedback_done()
-
-    print_success(f"Preview: {preview_url}")
     html_data = state_manager.get_html()
-    response = requests.post(
-        preview_url,
-        data=html_data.encode("utf-8"),
-        headers={"Content-Type": "text/plain"},
-    )
+    
+    if app_type != "interactive_data_app":
+        print_success(f"Preview: {preview_url}")
+        response = requests.post(
+            preview_url,
+            data=html_data.encode("utf-8"),
+            headers={"Content-Type": "text/plain"},
+        )
 
     # Initialisation of directory
     base_dir = init_git_repo()
@@ -212,16 +275,17 @@ def process_app_idea(idea: str):
             prompt=file_structure_prompt,
             response_format=FileStructureList,
         )
-        structure_response = structure_agent.invoke(
-            {
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": f"Idea: {idea}\n\nPlan:\n{plan}\n\nA sample preview generated using html only for reference on how the UI for the website should look:\n{html_data}",
-                    }
-                ]
-            }
-        )
+        if app_type == "interactive_data_app":
+            print_info("📊 Streamlit app detected - generating structure for Streamlit application")
+            structure_content = f"Idea: {idea}\n\nPlan:\n{plan}\n\nApp Type: Streamlit application - focus on Python components and data handling"
+        else:
+            html_data = state_manager.get_html()
+            structure_content = f"Idea: {idea}\n\nPlan:\n{plan}\n\nA sample preview generated using html only for reference on how the UI for the website should look:\n{html_data}"
+        
+        structure_response = structure_agent.invoke({
+            "messages": [{"role": "user", "content": structure_content}]
+        })
+        
         file_paths = structure_response["structured_response"].paths
         state_manager.update_structure(file_paths)
 
@@ -243,16 +307,18 @@ def process_app_idea(idea: str):
             response_format=FileGenerationList,
         )
         for progress, batch in batch_files(file_paths, batch_size=4):
-            response = batch_agent.invoke(
-                {
-                    "messages": [
-                        {
-                            "role": "user",
-                            "content": f"Idea: {idea}\n\nPlan: {plan}\n\nA sample preview generated using html only for reference on how the UI for the website should look:\n{html_data}\n\n\nEntire file structure: {structure}\n\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}",
-                        }
-                    ]
-                }
-            )
+            
+            if app_type == "interactive_data_app":
+                print_info("📊 Streamlit app detected - generating code for Streamlit application")
+                batch_content = f"Idea: {idea}\n\nPlan: {plan}\n\nApp Type: Streamlit application\n\nEntire file structure: {structure}\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}"
+            else:
+                html_data = state_manager.get_html()
+                batch_content = f"Idea: {idea}\n\nPlan: {plan}\n\nA sample preview generated using html only for reference on how the UI for the website should look:\n{html_data}\n\nEntire file structure: {structure}\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}"
+                
+            response = batch_agent.invoke({
+                "messages": [{"role": "user", "content": batch_content}]
+            })
+
             batch_code = []
             for file_response in response["structured_response"].items:
                 file_dict = {
@@ -486,6 +552,7 @@ def cleanup():
 
 
 idea = """
-Create web application for playing games, it should have a minimun of 5 unique and fun games that i should be able to enjoy. Also make sure that you have a dark theme for my website lik I want it to look and function very cool. Also include some way to save and display scores of the top players.
+Create app for downloading youtube videos and converting them to mp3 format.use streamlit
 """
-process_app_idea(idea)
+app_type = ""  # or "modern_web_app", "interactive_data_app"
+process_app_idea(idea,app_type)
