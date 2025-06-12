@@ -24,7 +24,7 @@ from prompts import (
     classifier_prompt,
     planner_prompt,
     code_generation_prompt,
-    code_validation_prompt,
+    code_debugger_prompt,
     file_structure_prompt,
     file_changes_prompt,
     html_planner_input,
@@ -384,6 +384,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
     user_input = "start"
 
     if not state_manager.is_review_done():
+        print_info("Running reviewer agent...")
         reviewer_agent = create_react_agent(
             model=code_model,
             tools=[],
@@ -507,13 +508,13 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         print(f"\n\nCode Changes Suggested: \n\n{code_changes_data}\n\n")
 
         for progress, batch in batch_files(code_changes_data, batch_size=5):
-            validation_agent = create_react_agent(
+            debugger_agent = create_react_agent(
                 model=code_model,
                 tools=[],
-                prompt=code_validation_prompt,
+                prompt=code_debugger_prompt,
                 response_format=FileGenerationList,
             )
-            validated_code_response = validation_agent.invoke(
+            debugged_code_response = debugger_agent.invoke(
                 {
                     "messages": [
                         {
@@ -524,7 +525,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                 }
             )
             updated_code_data = []
-            for file_response in validated_code_response["structured_response"].items:
+            for file_response in debugged_code_response["structured_response"].items:
                 file_dict = {
                     "file_path": file_response.file_path,
                     "content": file_response.content,
@@ -581,7 +582,7 @@ def cleanup():
 
 
 idea = """
-Create a simple snake game that should be playable in both laptop and mobile
+Create a website for an eye clinic in India
 """
 app_type = ""  # or "modern_web_app", "interactive_data_app"
 process_app_idea(idea, app_type)

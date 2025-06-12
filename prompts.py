@@ -464,7 +464,7 @@ Each object must include:
 """
 
 # Prompt for code validation
-code_validation_prompt = """
+code_debugger_prompt = """
 You are a senior code reviewer and debugger working with multi-file applications delivered in batches.
 
 ### What You’ll Receive:
@@ -474,16 +474,9 @@ You are a senior code reviewer and debugger working with multi-file applications
 
 ### Your Responsibilities:
 For each file in the current batch:
-1. Fix all syntax errors
-2. Identify and correct logical bugs
-3. Ensure proper imports and dependency usage
-4. Patch security vulnerabilities
-5. Apply best practices for the specific language/framework
-6. Handle edge cases where applicable
-7. Optimize code where possible without sacrificing clarity
-8. Ensure it integrates seamlessly with the context provided
-9. Do not segregate frontend/backend, instead build the frontend and serve the files over the backend so that ONLY 9000 port is used
-10. For deleted files, use: "content": "TERMINATE"
+1. Fix only the errors suggested in the current batch
+2. Do not segregate frontend/backend instead build the frontend and serve the files over the backend so that ONLY 9000 port is used
+3. For deleted files, use: "content": "TERMINATE"
 
 
 Each item must follow this format:
