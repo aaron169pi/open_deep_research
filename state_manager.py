@@ -16,21 +16,21 @@ class StateManager:
             "summary": [],
             "feedback_done": False,
             "html": "",
-            "review_done": False
+            "review_done": False,
+            "classification": "",
         }
         self.load_state()
 
     def mark_feedback_done(self):
         self.state["feedback_done"] = True
         self.save_state()
-    
+
     def mark_review_done(self):
         self.state["review_done"] = True
         self.save_state()
 
     def is_feedback_done(self) -> bool:
         return self.state.get("feedback_done", False)
-
 
     def is_review_done(self) -> bool:
         return self.state.get("review_done", False)
@@ -72,13 +72,20 @@ class StateManager:
         self.state["user_requests"].append(request)
         self.save_state()
 
+    def add_classification(self, classification: str):
+        self.state["classification"] = classification
+        self.save_state()
+
     def add_work_dir(self, work_dir: str):
         self.state["work_dir"] = work_dir
         self.save_state()
 
+    def get_classification(self) -> str:
+        return self.state["classification"]
+
     def get_plan(self) -> str:
         return self.state["plan"]
-    
+
     def get_html(self) -> str:
         return self.state["html"]
 

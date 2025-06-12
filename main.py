@@ -88,6 +88,7 @@ def init_models():
 
 def classify_app_type(idea: str) -> str:
     classifier_model, _, _, _ = init_models()
+
     classifier_agent = create_react_agent(
         model=classifier_model,
         tools=[],
@@ -97,7 +98,6 @@ def classify_app_type(idea: str) -> str:
     response = classifier_agent.invoke(
         {"messages": [{"role": "user", "content": idea}]}
     )
-    print(response)
     app_type = response["structured_response"].app_type
     print_info(f"Classified app type: {app_type}")
 
@@ -113,25 +113,27 @@ def process_app_idea(idea: str, app_type: str = "auto"):
     classifier_model, planner_model, code_model, structure_model = init_models()
     state_manager = StateManager()
 
-    valid_types = {"modern_web_app", "interactive_data_app", "web_app_python"}
-    if app_type not in valid_types:
-        print_info("🧠 Classifying app type automatically...")
-        app_type = classify_app_type(idea)
-        print_info(f"✅ Auto-classified as: {app_type}")
-    else:
-        print_info(f"✅ User selected app type: {app_type}")
+    if not state_manager.get_classification():
+        valid_types = {"modern_web_app", "interactive_data_app", "web_app_python"}
+        if app_type not in valid_types:
+            print_info("🧠 Classifying app type automatically...")
+            app_type = classify_app_type(idea)
+            print_info(f"✅ Auto-classified as: {app_type}")
+        else:
+            print_info(f"✅ User selected app type: {app_type}")
+        state_manager.add_classification(app_type)
 
     APP_TYPE_DESCRIPTIONS = {
         "modern_web_app": "A full-stack web application built with React frontend and Node.js backend, designed for complex user interactions, scalable architecture, and rich user experiences. Ideal for production-ready applications like e-commerce platforms, SaaS products, social media apps, and enterprise business applications that require advanced features like real-time updates, user authentication, and sophisticated state management.",
         "interactive_data_app": "A single-page Python application using the Streamlit framework for rapid prototyping and data-focused applications. Features built-in UI components, automatic reactivity, and seamless integration with data science libraries. Perfect for creating interactive dashboards, data visualization tools, ML model demonstrations, analytics platforms, and research tools that require quick development and easy sharing without separate frontend/backend architecture.",
         "web_app_python": "A web application with Python backend (Flask/FastAPI) and custom frontend (HTML/React), following API-first architecture with clear separation of concerns. Designed for building scalable web services, REST APIs, microservices, and custom web applications that require database integration, user management systems, authentication, and flexible frontend design options suitable for production environments.",
     }
+    app_type = state_manager.get_classification()
     app_type_description = APP_TYPE_DESCRIPTIONS.get(
         app_type, "No description available."
     )
     print_info(f"✅ App Type Description:\n{app_type_description}")
 
-    app_type = app_type
     # Check if a plan already exists
     if not state_manager.get_plan():
         plan_response = planner_model.invoke(
