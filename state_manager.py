@@ -81,7 +81,7 @@ class StateManager:
         self.save_state()
 
     def get_classification(self) -> str:
-        return  "modern_web_app" or self.state["classification"]
+        return self.state["classification"]
 
     def get_plan(self) -> str:
         return self.state["plan"]
