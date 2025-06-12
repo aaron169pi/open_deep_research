@@ -325,7 +325,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
             prompt=code_generation_prompt,
             response_format=FileGenerationList,
         )
-        for progress, batch in batch_files(file_paths, batch_size=6):
+        for progress, batch in batch_files(file_paths, batch_size=5):
 
             if app_type == "interactive_data_app":
                 print_info(
@@ -370,10 +370,13 @@ def process_app_idea(idea: str, app_type: str = "auto"):
 
         print(f"Generated Code: \n\n{generated_code}")
         commit_id, repo_name = commit_changes(base_dir, message="Initial project setup")
-        state_manager.add_work_dir(repo_name)
-        state_manager.add_user_request(
-            {"user_input": "Initial project setup", "commit_id": commit_id}
-        )
+        if "ERROR" in repo_name:
+            print_warning("No changes were made in the commit")
+        else:
+            state_manager.add_work_dir(repo_name)
+            state_manager.add_user_request(
+                {"user_input": "Initial project setup", "commit_id": commit_id}
+            )
 
     code_data = state_manager.get_codebase()
     user_input = "start"
@@ -501,7 +504,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         print_success(response["structured_response"].reasoning)
         print(f"\n\nCode Changes Suggested: \n\n{code_changes_data}\n\n")
 
-        for progress, batch in batch_files(code_changes_data, batch_size=6):
+        for progress, batch in batch_files(code_changes_data, batch_size=5):
             validation_agent = create_react_agent(
                 model=code_model,
                 tools=[],
@@ -557,9 +560,12 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         commit_id, repo_name = commit_changes(
             base_dir, message=f"Applied user request: {user_input[:200]}"
         )
-        state_manager.add_user_request(
-            {"user_input": user_input, "commit_id": commit_id}
-        )
+        if "ERROR" in repo_name:
+            print_warning("No changes were made in the commit")
+        else:
+            state_manager.add_user_request(
+                {"user_input": user_input, "commit_id": commit_id}
+            )
 
 
 @atexit.register
@@ -573,7 +579,7 @@ def cleanup():
 
 
 idea = """
-Create an e-ecommerce platform to sell the refurnished products eg: Tv, fridge, mobile, etc.
+Create a simple snake game that should be playable in both laptop and mobile
 """
 app_type = ""  # or "modern_web_app", "interactive_data_app"
 process_app_idea(idea, app_type)

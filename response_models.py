@@ -27,13 +27,8 @@ class FileChangesList(BaseModel):
     reasoning: str
 
 
-class FileGroups(BaseModel):
-    file_path: str
-    group: str
-
-
 class FileStructureList(BaseModel):
-    paths: List[FileGroups]
+    paths: List[str]
 
 
 class ReviewerResponse(BaseModel):

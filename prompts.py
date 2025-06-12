@@ -411,9 +411,6 @@ Your output must represent a runnable, testable, and clean MVP with modern conve
 - Do not generate mock assets or static files (like favicon.ico or other .png files) unless used directly in the code
 - Do not add extra layers of folders unless logically necessary
 - Do NOT add .gitignore files ever
-
-
-Along with each path make sure you include it's group, for example a frontend file would be grouped under the frontend group, a backend file under the backend group and so on, use your own expertise to group
 """
 
 # Prompt for code generation
@@ -421,7 +418,11 @@ code_generation_prompt = """
 You are a senior software engineer and UI/UX expert generating **production-ready, visually stunning code**, **fully functional code** for a multi-file application that is end to end functional, in **batches**, based on a provided file structure and project plan.
 
 **Tool**
-If you're missing critical information such as environment variable keys, database credentials, third-party service choices, or any configuration where multiple valid options exist, use the `ask_user_input` tool to request clarification from the user before proceeding.
+Use `ask_user_input` ONLY when integrating third-party APIs that require:
+- External API keys or authentication tokens
+- Specific service provider endpoints or credentials
+- Custom webhook configurations or callback URLs
+For all other requirements, select optimal solutions based on project plan/needs.
 
 **Inputs You'll Receive:**
 - Full list of intended file paths
@@ -499,7 +500,11 @@ You are assisting in modifying an existing project.
   {code_context}
 
 **Tool**
-If you're missing critical information such as environment variable keys, database credentials, third-party service choices, or any configuration where multiple valid options exist, use the `ask_user_input` tool to request clarification from the user before proceeding.
+Use `ask_user_input` ONLY when integrating third-party APIs that require:
+- External API keys or authentication tokens
+- Specific service provider endpoints or credentials
+- Custom webhook configurations or callback URLs
+For all other requirements, select optimal solutions based on project plan/needs.
   
 **Your Task:** Identify which files need to be added, modified, or deleted according to the user's request or need and how you can make the project function better.
 

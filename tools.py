@@ -24,6 +24,11 @@ def save_files(code_data: str, base_dir: str) -> str:
             # Normalize and build final path
             path = os.path.normpath(os.path.join(base_dir, rel_path))
 
+            if item["content"] == "TERMINATE":
+                if os.path.exists(path):
+                    os.remove(path)
+                continue  # Skip to next file
+
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
                 f.write(item["content"])
@@ -286,7 +291,7 @@ def commit_changes(base_dir: str, message: str = "Update code") -> str:
         return commit_id, repo_name
     except subprocess.CalledProcessError as e:
         print_error(f"Error committing changes: {str(e)}")
-        return f"Error committing changes: {str(e)}"
+        return f"Error committing changes: {str(e)}", "ERROR"
 
 
 def process_url(url: str) -> str:
