@@ -43,12 +43,14 @@ def check_website(link: str, dir_name: str) -> list:
         logs = response.json()["stdout"]
         logs += "\n\n" + response.json()["stderr"]
 
+        print_info(f"Status code: {hit.status_code}")
+
         return [
             0 if int(hit.status_code) < 300 else 1,
             (
-                str(f"These are the error logs: {logs}")
+                "success"
                 if int(hit.status_code) < 300
-                else "success"
+                else str(f"These are the error logs: {logs}")
             ),
         ]
     except Exception as e:
