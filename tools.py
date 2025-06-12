@@ -272,7 +272,7 @@ def rollback_codebase(base_dir: str, commit_id: str):
     return file_dicts
 
 
-def commit_changes(base_dir: str, message: str = "Update code") -> str:
+def commit_changes(base_dir: str, message: str = "Update code", repo_name: str = "") -> str:
     try:
         subprocess.run(["git", "add", "."], cwd=base_dir, check=True)
         subprocess.run(["git", "commit", "-m", message[:256]], cwd=base_dir, check=True)
@@ -287,11 +287,11 @@ def commit_changes(base_dir: str, message: str = "Update code") -> str:
         )
         commit_id = result.stdout.strip()
 
-        repo_name = push_to_github(base_dir)
+        repo_name = push_to_github(base_dir, repo_name)
         return commit_id, repo_name
     except subprocess.CalledProcessError as e:
         print_error(f"Error committing changes: {str(e)}")
-        return f"Error committing changes: {str(e)}", "ERROR"
+        return f"Error committing changes: {str(e)}", None
 
 
 def process_url(url: str) -> str:
@@ -324,7 +324,7 @@ def create_github_repo(repo_prefix: str = "tempo") -> str:
         raise Exception(f"GitHub API error: {response.status_code} - {response.text}")
 
 
-def push_to_github(base_dir: str) -> str:
+def push_to_github(base_dir: str, repo_name: str = "") -> str:
     try:
         # Check if a remote already exists
         result = subprocess.run(
@@ -347,6 +347,7 @@ def push_to_github(base_dir: str) -> str:
             subprocess.run(
                 ["git", "push", "-u", permission_url, "main"], cwd=base_dir, check=True
             )
+            return repo_name
         else:
             # No remote — create GitHub repo and push
             remote_url = create_github_repo()
@@ -364,8 +365,10 @@ def push_to_github(base_dir: str) -> str:
             return remote_url[1]
     except subprocess.CalledProcessError as e:
         print_error(f"Git error: {e}")
+        return None
     except Exception as e:
         print_error(str(e))
+        return None
 
 
 def print_error(str):

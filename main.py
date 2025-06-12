@@ -372,7 +372,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
 
         print(f"Generated Code: \n\n{generated_code}")
         commit_id, repo_name = commit_changes(base_dir, message="Initial project setup")
-        if "ERROR" in repo_name:
+        if repo_name is None:
             print_warning("No changes were made in the commit")
         else:
             state_manager.add_work_dir(repo_name)
@@ -562,7 +562,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         commit_id, repo_name = commit_changes(
             base_dir, message=f"Applied user request: {user_input[:200]}"
         )
-        if "ERROR" in repo_name:
+        if repo_name is None:
             print_warning("No changes were made in the commit")
         else:
             state_manager.add_user_request(
