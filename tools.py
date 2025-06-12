@@ -33,6 +33,26 @@ def save_files(code_data: str, base_dir: str) -> str:
         return f"Error saving files: {str(e)}"
 
 
+def extract_preview_plan(text):
+    # Find all matches for 'Pages' and 'Features'
+    pattern = r"## (Pages|Features)(.*?)(?=\n## |\Z)"
+    matches = re.findall(pattern, text, re.DOTALL)
+
+    # Use a dictionary to store only the latest occurrence
+    latest_sections = {}
+    for header, content in matches:
+        latest_sections[header] = content.strip()
+
+    # Reconstruct the result in the order: Pages, then Features (if they exist)
+    result = ""
+    if "Pages" in latest_sections:
+        result += f"## Pages\n{latest_sections['Pages']}\n\n"
+    if "Features" in latest_sections:
+        result += f"## Features\n{latest_sections['Features']}\n"
+
+    return result.strip()
+
+
 def check_website(link: str, dir_name: str) -> list:
     try:
         hit = requests.get(link)
