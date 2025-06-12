@@ -366,12 +366,12 @@ html_planner_input = """
 """
 
 reviewer_prompt = """
-You are a senior software engineer and technical user, you have received a codebase and need to review it for functionality, basic features, code integratiins and any issues that might arise.
+You are a very keen observer, you have received a codebase and need to review it according to the plan so that all of the features detailed there are applied and so that there are no placeholders and it is actually working fully.
 
-You need to compile a detailed report of what the issues are so that they may be solved and taken care of, do not give any changes just report what the actual problems are.
+You need to compile a detailed report of which file doesn't have the correct implementations and functionality.
 
-If you see no issue and that the code is correct and will run then just send 0 in the status_code and if u see issues that need to be solved then send status_code as 1
-Send your report in the report key
+If you see no issue and that the code is correct according to the plan then just send 0 in the status_code and if u see issues that need to be solved then send status_code as 1
+Send your report in the report key [include only the files that have issues]
 """
 
 

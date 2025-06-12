@@ -306,7 +306,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
             prompt=code_generation_prompt,
             response_format=FileGenerationList,
         )
-        for progress, batch in batch_files(file_paths, batch_size=4):
+        for progress, batch in batch_files(file_paths, batch_size=6):
             
             if app_type == "interactive_data_app":
                 print_info("📊 Streamlit app detected - generating code for Streamlit application")
@@ -386,7 +386,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         if "Failed" in server_res or "Error" in server_res or status_code == 1:
             if status_code == 1:
                 print_warning(report)
-                user_input = f"Here is the detailed report of the code review, please handle all of the errors detailed in this report and fix them: {report}"
+                user_input = f"Here is the original plan that was used to generate this code:\n\n{plan}\n\nHere is the detailed report of the code review, please handle all of the errors detailed in this report and fix them: {report}, please make sure that the code is working properly and there are no errors ."
                 status_code = 0
             else:
                 print_error(server_res)
@@ -398,7 +398,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                 )
         else:
             print_warning("Checking for any errors...")
-            time.sleep(30)
+            time.sleep(40)
             link = server_res_obj["link"]
             code, check_msg = check_website(link, repo_name)
             time.sleep(5)
@@ -480,7 +480,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         print_success(response["structured_response"].reasoning)
         print(f"\n\nCode Changes Suggested: \n\n{code_changes_data}\n\n")
 
-        for progress, batch in batch_files(code_changes_data, batch_size=4):
+        for progress, batch in batch_files(code_changes_data, batch_size=6):
             validation_agent = create_react_agent(
                 model=code_model,
                 tools=[],
@@ -552,7 +552,7 @@ def cleanup():
 
 
 idea = """
-Create app for downloading youtube videos and converting them to mp3 format.use streamlit
+Create a streamlit app for downloading youtube videos based on the links provided by the user as mp3 files
 """
 app_type = ""  # or "modern_web_app", "interactive_data_app"
 process_app_idea(idea,app_type)
