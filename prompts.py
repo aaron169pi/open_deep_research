@@ -295,12 +295,7 @@ Where details are missing, fill in with industry-leading best practices and mode
 **Output Format:**
 ## [Project Name] Dashboard
 ## Goal
-[A detailed description (2–3 paragraphs) of the application's main objective in the user's own terms, including:
-- The core problem or user need being addressed with emphasis on user pain points
-- The context and emotional journey users will experience
-- The expected interaction flow highlighting key moments and micro-interactions
-- The primary value and transformative benefit this app provides
-- Success metrics and user satisfaction indicators]
+[A concise description (3–4 lines) of the application's main purpose, highlighting the core problem, user needs, and the value it provides through key interactions and emotional engagement.]
 ## Pages
 Based on the features we've listed, these are the main pages I'm planning with modern UX flow considerations. Feel free to adjust this list.
 [✓] Required Page 1 - [Brief UX purpose and key interactions]
@@ -318,12 +313,6 @@ Based on the features we've listed, these are the main functionalities I'm plann
 - Primary: [Modern font family with character - e.g., Inter, Poppins, or custom Google Font]
 - Secondary: [Complementary font for headings/accents]
 - Font scales and hierarchy considerations
-**Color Palette:**
-- Primary: [Main brand color with hex code] - [Emotional association/usage]
-- Secondary: [Supporting color with hex code] - [Usage context]
-- Accent: [Highlight color with hex code] - [Call-to-action usage]
-- Neutral palette: [Light/dark variations with hex codes]
-- Success/Warning/Error states with hex codes
 ## Tech Stack
 **Frontend:** [Select cutting-edge technology optimized for modern UI - React 18+/Streamlit (according to the requirement)]
 **Styling:** [Modern CSS solution - Tailwind CSS/Styled Components/CSS Modules/Emotion]
@@ -332,15 +321,10 @@ Based on the features we've listed, these are the main functionalities I'm plann
 **Database:** [SQLite]
 **Deployment:** [Modern deployment options with CI/CD considerations]
 ## Additional Information
-[Comprehensive description including:
-- What the app is building with emphasis on user transformation
-- Primary and secondary target audiences with persona insights
-- Typical usage scenarios and emotional contexts
-- Key competitive advantages and unique value propositions
-- Success metrics and user engagement goals]
+[A short 3–4 line paragraph covering what the app builds, the main target users, and the key user transformation or competitive edge.]
 **Focus on creating an exceptional, memorable user experience that users will want to share and return to regularly.**
 """
-         
+
 html_planner_input = """
   You are a coding assistant that helps to build an amazing prototype that is purely for design, not functionality.
   You must respond ONLY with code — no explanations, no preambles.
@@ -406,11 +390,12 @@ Your output must represent a runnable, testable, and clean MVP with modern conve
 - Respect idiomatic folder structures for the chosen stack (e.g., `src/`, `app/`, etc.) — but only if needed
 - Use clean, minimal file organization that balances clarity with future scalability
 
-### Avoid:
+### Rules:
 - Never include placeholder files or folders that aren't used yet
 - Do not generate mock assets or static files (like favicon.ico or other .png files) unless used directly in the code
 - Do not add extra layers of folders unless logically necessary
 - Do NOT add .gitignore files ever
+- Never give an empty array of file paths
 """
 
 # Prompt for code generation

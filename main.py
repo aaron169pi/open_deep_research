@@ -80,14 +80,18 @@ def init_models():
     )
     code_model = ChatGoogleGenerativeAI(
         model="gemini-2.5-pro-preview-05-06",
-        max_tokens=25000,
+        max_tokens=50000,
+    )
+    html_model = ChatGoogleGenerativeAI(
+        model="gemini-2.5-pro-preview-06-05",
+        max_tokens=50000,
     )
 
-    return classifier_model, planner_model, code_model, structure_model
+    return classifier_model, planner_model, code_model, structure_model, html_model
 
 
 def classify_app_type(idea: str) -> str:
-    classifier_model, _, _, _ = init_models()
+    classifier_model, _, _, _, _ = init_models()
 
     classifier_agent = create_react_agent(
         model=classifier_model,
@@ -110,7 +114,7 @@ def classify_app_type(idea: str) -> str:
 
 
 def process_app_idea(idea: str, app_type: str = "auto"):
-    classifier_model, planner_model, code_model, structure_model = init_models()
+    _, planner_model, code_model, structure_model, html_model = init_models()
     state_manager = StateManager()
 
     if not state_manager.get_classification():
@@ -172,7 +176,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     if not state_manager.get_html():
                         planner_input = html_planner_input.format(prompt=idea)
                         preview_plan = extract_preview_plan(plan)
-                        preview = code_model.invoke(
+                        preview = html_model.invoke(
                             html_planner_prompt.format(
                                 plan=preview_plan, input=planner_input
                             )
@@ -249,7 +253,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                 planner_update_input = html_planner_input.format(prompt=plan_feedback)
                 preview_plan = extract_preview_plan(plan)
                 refined_preview_plan = extract_preview_plan(refined_plan)
-                preview = code_model.invoke(
+                preview = html_model.invoke(
                     html_update_planner_prompt.format(
                         plan=preview_plan,
                         input=planner_input,
