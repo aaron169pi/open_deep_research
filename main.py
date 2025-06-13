@@ -475,7 +475,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
             time.sleep(5)
             code, check_msg = check_website(link, repo_name)
 
-            if "success" not in check_msg or code == 1:
+            if code == 1:
                 print_error(f"This is the server error message: \n\n{check_msg}")
                 user_input = (
                     "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
@@ -491,13 +491,15 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                 ).strip()
 
                 code, check_msg = check_website(link, repo_name)
-                if "success" not in check_msg:
+                if code == 1:
                     print_error(check_msg)
                     user_input += (
                         "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
                         f"This was the error log: {check_msg}"
                         "Fix this error properly and any errors that might propogate due to this error too"
                     )
+                else:
+                    user_input += check_msg
 
                 if user_input.lower() in {"exit", "quit"}:
                     stop_server(repo_name)
@@ -626,7 +628,7 @@ def cleanup():
 
 
 idea = """
-Create a website for an eye clinic in India
+Create a website for an eye clinic in India using only html css and serve it over a express backend along with apis
 """
 app_type = ""  # or "modern_web_app", "interactive_data_app"
 process_app_idea(idea, app_type)

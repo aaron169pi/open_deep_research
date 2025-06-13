@@ -72,11 +72,7 @@ def check_website(link: str, dir_name: str) -> list:
 
         return [
             0 if int(hit.status_code) < 300 else 1,
-            (
-                "success"
-                if int(hit.status_code) < 300
-                else str(f"These are the error logs: {logs}")
-            ),
+            f"These are the server logs: {logs}",
         ]
     except Exception as e:
         response = requests.get(f"{API_URL}/logs/{dir_name}")
@@ -272,7 +268,9 @@ def rollback_codebase(base_dir: str, commit_id: str):
     return file_dicts
 
 
-def commit_changes(base_dir: str, message: str = "Update code", repo_name: str = "") -> str:
+def commit_changes(
+    base_dir: str, message: str = "Update code", repo_name: str = ""
+) -> str:
     try:
         subprocess.run(["git", "add", "."], cwd=base_dir, check=True)
         subprocess.run(["git", "commit", "-m", message[:256]], cwd=base_dir, check=True)

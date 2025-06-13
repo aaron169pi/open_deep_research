@@ -356,6 +356,8 @@ You need to compile a detailed report of which file doesn't have the correct imp
 
 If you see no issue and that the code is correct according to the plan then just send 0 in the status_code and if u see issues that need to be solved then send status_code as 1
 Send your report in the report key [include only the files that have issues]
+
+Allow startup.sh to have hardcoded env variables, that is fine for my use case 
 """
 
 
