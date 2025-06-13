@@ -156,16 +156,16 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         while True and not state_manager.is_feedback_done():
             winsound.Beep(500, 500)
 
-            plan_feedback = input(
-                "Do you have any changes? (or type 'no')\n>>>"
-            )
+            plan_feedback = input("Do you have any changes? (or type 'no')\n>>>")
 
             # Check if all values are "no" or empty
             if plan_feedback in {"no", "n", ""}:
                 print_info(
                     " No changes made to the plan. Proceeding with implementation."
                 )
-                state_manager.update_html("<!-- Streamlit app - no HTML preview needed -->")
+                state_manager.update_html(
+                    "<!-- Streamlit app - no HTML preview needed -->"
+                )
                 state_manager.update_plan(plan)
                 state_manager.mark_feedback_done()
                 print("Feedback marked as done. Exiting feedback loop.")
@@ -490,17 +490,6 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     "\n>>> Enter additional request for your project (or type 'exit'): "
                 ).strip()
 
-                code, check_msg = check_website(link, repo_name)
-                if code == 1:
-                    print_error(check_msg)
-                    user_input += (
-                        "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
-                        f"This was the error log: {check_msg}"
-                        "Fix this error properly and any errors that might propogate due to this error too"
-                    )
-                else:
-                    user_input += check_msg
-
                 if user_input.lower() in {"exit", "quit"}:
                     stop_server(repo_name)
                     print("Exiting loop.")
@@ -530,6 +519,17 @@ def process_app_idea(idea: str, app_type: str = "auto"):
 
                 if not user_input:
                     continue
+
+                code, check_msg = check_website(link, repo_name)
+                if code == 1:
+                    print_error(check_msg)
+                    user_input += (
+                        "\n\nThis code was run inside of a docker container, the container stopped due to some issue or something else happened"
+                        f"This was the error log: {check_msg}"
+                        "Fix this error properly and any errors that might propogate due to this error too"
+                    )
+                else:
+                    user_input += check_msg
 
         # Prepare context for the agent
         code_context = json.dumps(code_data)
