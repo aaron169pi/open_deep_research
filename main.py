@@ -153,9 +153,52 @@ def process_app_idea(idea: str, app_type: str = "auto"):
 
     if app_type == "interactive_data_app":
         print_info("📊 Streamlit app detected - skipping HTML preview generation")
-        state_manager.mark_feedback_done()
-        # Set empty HTML data for consistency
-        state_manager.update_html("<!-- Streamlit app - no HTML preview needed -->")
+        while True and not state_manager.is_feedback_done():
+            winsound.Beep(500, 500)
+
+            plan_feedback = input(
+                "Do you have any changes? (or type 'no')\n>>>"
+            )
+
+            # Check if all values are "no" or empty
+            if plan_feedback in {"no", "n", ""}:
+                print_info(
+                    " No changes made to the plan. Proceeding with implementation."
+                )
+                state_manager.update_html("<!-- Streamlit app - no HTML preview needed -->")
+                state_manager.update_plan(plan)
+                state_manager.mark_feedback_done()
+                print("Feedback marked as done. Exiting feedback loop.")
+                break  # This break is inside the while True loop, so it's valid
+
+            refined_plan_prompt = f"""
+            Here is the original project plan:
+
+            {plan}
+            The user has provided the following feedback.
+            {plan_feedback}
+
+            First understand the original plan and make the changes accordingly.
+            Your task is to revise the original plan by merging the user's feedback carefully:
+            - Do *not* discard any original information unless the user clearly says so.
+            - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
+            - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
+            - If user feedback is to add new page and update the page structure, do so without removing existing pages and their content.
+            🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
+            - What the user's feedback was,
+            - What changes you made based on it,
+            - And how those changes respect and enhance the original plan.
+
+            Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
+            Your explanation should flow like human reasoning — not in list format or bullet points.
+            After that, return the revised project plan in the **exact same markdown format** as the original.
+            Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
+            """
+
+            refined_plan_response = planner_model.invoke(refined_plan_prompt)
+            plan = refined_plan_response.content
+            print(f"\n Refined Plan:\n{plan}")
+
     else:
         if not state_manager.is_feedback_done():
             print(f"\n Initial Project Plan:\n{plan}\n")
@@ -334,9 +377,6 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         for progress, batch in batch_files(file_paths, batch_size=5):
 
             if app_type == "interactive_data_app":
-                print_info(
-                    "📊 Streamlit app detected - generating code for Streamlit application"
-                )
                 batch_content = f"Idea: {idea}\n\nPlan: {plan}\n\nApp Type: Streamlit application\n\nEntire file structure: {structure}\n\nFiles you need to generate: {batch}\n\nSummary of previously generated code: {summary}"
             else:
                 html_data = state_manager.get_html()
@@ -388,7 +428,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
     user_input = "start"
 
     if not state_manager.is_review_done():
-        print_info("Running reviewer agent...")
+        print_info("Validating the codebase...")
         reviewer_agent = create_react_agent(
             model=code_model,
             tools=[],
