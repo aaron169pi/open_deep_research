@@ -1,6 +1,6 @@
 import pickle
 import os
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Union
 
 
 class StateManager:
@@ -18,6 +18,7 @@ class StateManager:
             "html": "",
             "review_done": False,
             "classification": "",
+            "assets": [],
         }
         self.load_state()
 
@@ -72,6 +73,17 @@ class StateManager:
         self.state["user_requests"].append(request)
         self.save_state()
 
+    def add_assets(self, asset: Union[object, List[object]]):
+        current_count = len(self.state["assets"])
+        assets_to_add = asset if isinstance(asset, list) else [asset]
+
+        for i, a in enumerate(assets_to_add, start=1):
+            tag = f"image_{current_count + i}"
+            a["tag"] = tag
+            self.state["assets"].append(a)
+
+        self.save_state()
+
     def add_classification(self, classification: str):
         self.state["classification"] = classification
         self.save_state()
@@ -103,6 +115,9 @@ class StateManager:
 
     def get_user_requests(self) -> List[str]:
         return self.state["user_requests"]
+
+    def get_assets(self) -> List[object]:
+        return self.state["assets"]
 
     def get_work_dir(self) -> str:
         return self.state["work_dir"]

@@ -7,6 +7,8 @@ import requests
 import winsound
 from langchain_core.tools import Tool
 from dotenv import load_dotenv
+from tkinter import Tk, filedialog
+
 
 load_dotenv()
 
@@ -23,11 +25,6 @@ def save_files(code_data: str, base_dir: str) -> str:
             rel_path = item["file_path"].lstrip("/\\")
             # Normalize and build final path
             path = os.path.normpath(os.path.join(base_dir, rel_path))
-
-            if item["content"] == "TERMINATE":
-                if os.path.exists(path):
-                    os.remove(path)
-                continue  # Skip to next file
 
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, "w", encoding="utf-8") as f:
@@ -140,57 +137,48 @@ def start_server(dir_name: str) -> object:
         return error_msg
 
 
-# def server_logs(dir_name: str) -> str:
-#     try:
-#         response = requests.get(f"{API_URL}/logs/{dir_name}")
-#         response.raise_for_status()
+def select_images():
+    root = Tk()
+    root.withdraw()  # Hide main window
+    root.call("wm", "attributes", ".", "-topmost", True)  # Bring dialog to front
 
-#         logs = response.json()["stdout"][-2000:]
-#         logs += "\n\n" + response.json()["stderr"][-2000:]
+    file_paths = filedialog.askopenfilenames(
+        title="Select image(s) to upload",
+        filetypes=[("Image files", "*.png *.jpg *.jpeg *.ico *.gif *.bmp *.webp")],
+    )
+    root.destroy()  # Properly close the Tk instance
+    return file_paths
 
-#         error_patterns = [
-#             # Catch long 'Cannot find module ...' style blocks
-#             r"(Error: Cannot find module [\s\S]+?)(?=\n\S|\Z)",
 
-#             # Python traceback
-#             r"Traceback \(most recent call last\):[\s\S]+?(?=\n\S|\Z)",
+def upload_images():
+    file_paths = select_images()
+    if not file_paths:
+        print_error("No images selected.")
+        return
 
-#             # JavaScript/Node.js common error types
-#             r"(?:Error|TypeError|ReferenceError|SyntaxError|RangeError|EvalError|URIError):[\s\S]+?(?=\n\S|\Z)",
+    responses = []
 
-#             # npm errors (multi-line block or single line), case-insensitive
-#             r"(?i)^npm (?:ERR!|error).*(?:\n(?!\s*$).+)*",  # multi-line block
-#             r"(?i)^npm (?:ERR!|error).*$",  # single line like "npm error Missing script: ..."
+    for idx, path in enumerate(file_paths, start=1):
+        with open(path, "rb") as f:
+            files = {"file": (os.path.basename(path), f, "image/x-icon")}
+            data = {"tag": f"image_{idx}"}
 
-#             # Module not found specifically
-#             r"(?i)^.*module not found:.*$",
+            response = requests.post(
+                f"{API_URL}/upload_image",
+                files=files,
+                data=data,
+                headers={"accept": "application/json"},
+            )
 
-#             # Missing script specifically
-#             r"(?i)^.*missing script:.*$",
+            try:
+                res_data = response.json()
+            except Exception:
+                res_data = response.text
 
-#             # Shell/bash errors
-#             r"(?i)^.*(?:command not found|no such file or directory|permission denied|not recognized as an internal or external command).*$",
+            res_data["filename"] = os.path.basename(path)
+            responses.append(res_data)
 
-#             # Generic line-level fallback for anything with 'error'
-#             r"(?i)^.*error.*$",
-
-#             # React "Could not find a required file" block (3 lines)
-#             r"Could not find a required file\.\n(?: {2}.+\n){2}",
-
-#             # sh: style errors like "sh: 1: react-scripts: not found"
-#             r"^sh: \d+: .+$",
-#         ]
-
-#         errors = []
-#         for pattern in error_patterns:
-#             matches = re.findall(pattern, logs, re.MULTILINE | re.DOTALL)
-#             errors.extend(m.strip() for m in matches)
-
-#         errors = list(dict.fromkeys(errors))
-
-#         return "\n\n".join(errors) if errors else f"success: {errors}"
-#     except requests.exceptions.RequestException as e:
-#         return f"Failed to fetch logs: {e}"
+    return responses
 
 
 def rollback_server(dir_name: str, commit_id: str) -> str:

@@ -1,4 +1,5 @@
 import json
+import re
 import requests
 import subprocess
 import atexit
@@ -18,6 +19,7 @@ from tools import (
     rollback_server,
     check_website,
     extract_preview_plan,
+    upload_images,
     ask_user_input_tool,
 )
 from prompts import (
@@ -469,7 +471,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                 )
         else:
             print_warning("Checking for any errors...")
-            time.sleep(60)
+            time.sleep(10)
             link = server_res_obj["link"]
             code, check_msg = check_website(link, repo_name)
             time.sleep(5)
@@ -490,10 +492,38 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     "\n>>> Enter additional request for your project (or type 'exit'): "
                 ).strip()
 
+                if "#image_" in user_input:
+                    images = state_manager.get_assets()
+
+                    tags = re.findall(r"#(image_\d+)", user_input)
+
+                    replacements = {}
+
+                    for tag in tags:
+                        matched = next(
+                            (img for img in images if img.get("tag") == tag), None
+                        )
+                        if matched:
+                            replacements[f"#{tag}"] = json.dumps(matched)
+
+                    for k, v in replacements.items():
+                        user_input = user_input.replace(k, v)
+
                 if user_input.lower() in {"exit", "quit"}:
                     stop_server(repo_name)
                     print("Exiting loop.")
                     break
+
+                if user_input.lower() in {"upload", "images", "image", "img"}:
+                    code = int(input(">>> (1) List Images   (2) Upload Images: "))
+                    if code == 1:
+                        images = state_manager.get_assets()
+                        for i in images:
+                            print(f"{i['tag']}\t{i['filename']}\t{i['url']}")
+                    if code == 2:
+                        images = upload_images()
+                        state_manager.add_assets(images)
+                    continue
 
                 if user_input.lower() in {"restart"}:
                     res = start_server(repo_name)
@@ -588,6 +618,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                 for file in updated_code_data:
                     if file["content"] == "TERMINATE" or file["content"] == "":
                         existing_files.pop(file["file_path"], None)
+                        os.remove(os.path.join(base_dir, file["file_path"]))
                     else:
                         existing_files[file["file_path"]] = {
                             "file_path": file["file_path"],
@@ -628,7 +659,7 @@ def cleanup():
 
 
 idea = """
-Create a website for an eye clinic in India using only html css and serve it over a express backend along with apis
+Create a single page website using html, css and js for anything u want, create it fast
 """
 app_type = ""  # or "modern_web_app", "interactive_data_app"
 process_app_idea(idea, app_type)
