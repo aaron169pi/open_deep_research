@@ -20,6 +20,7 @@ from tools import (
     check_website,
     extract_preview_plan,
     upload_images,
+    chat_with_pi,
     ask_user_input_tool,
 )
 from prompts import (
@@ -33,6 +34,8 @@ from prompts import (
     html_planner_prompt,
     html_update_planner_prompt,
     reviewer_prompt,
+    refined_plan_html_prompt,
+    refined_plan_prompt,
 )
 from state_manager import StateManager
 from response_models import (
@@ -69,23 +72,23 @@ def init_models():
     # planner_model = ChatDeepSeek(model="deepseek-chat", max_tokens=8000)
 
     classifier_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-preview-04-17",
+        model="gemini-2.5-flash",
         max_tokens=8000,
     )
     planner_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash-preview-04-17",
+        model="gemini-2.5-flash",
         max_tokens=8000,
     )
     structure_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro-preview-05-06",
+        model="gemini-2.5-pro",
         max_tokens=10000,
     )
     code_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro-preview-05-06",
+        model="gemini-2.5-pro",
         max_tokens=50000,
     )
     html_model = ChatGoogleGenerativeAI(
-        model="gemini-2.5-pro-preview-06-05",
+        model="gemini-2.5-pro",
         max_tokens=50000,
     )
 
@@ -173,31 +176,9 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                 print("Feedback marked as done. Exiting feedback loop.")
                 break  # This break is inside the while True loop, so it's valid
 
-            refined_plan_prompt = f"""
-            Here is the original project plan:
-
-            {plan}
-            The user has provided the following feedback.
-            {plan_feedback}
-
-            First understand the original plan and make the changes accordingly.
-            Your task is to revise the original plan by merging the user's feedback carefully:
-            - Do *not* discard any original information unless the user clearly says so.
-            - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
-            - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
-            - If user feedback is to add new page and update the page structure, do so without removing existing pages and their content.
-            🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
-            - What the user's feedback was,
-            - What changes you made based on it,
-            - And how those changes respect and enhance the original plan.
-
-            Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
-            Your explanation should flow like human reasoning — not in list format or bullet points.
-            After that, return the revised project plan in the **exact same markdown format** as the original.
-            Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
-            """
-
-            refined_plan_response = planner_model.invoke(refined_plan_prompt)
+            refined_plan_response = planner_model.invoke(
+                refined_plan_prompt.format(plan=plan, plan_feedback=plan_feedback)
+            )
             plan = refined_plan_response.content
             print(f"\n Refined Plan:\n{plan}")
 
@@ -261,34 +242,11 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                         print("Feedback marked as done. Exiting feedback loop.")
                         break  # This break is inside the while True loop, so it's valid
 
-                refined_plan_prompt = f"""
-            Here is the original project plan:
-
-            {plan}
-            The user has provided the following feedback.
-            {plan_feedback}
-            A preview using HTML was also generate and these are the contents for reference
-            {html_data}
-            If the user's query is purely regarding makes no actual change to the plan then give back the old plan itself
-
-            First understand the original plan and make the changes accordingly.
-            Your task is to revise the original plan by merging the user's feedback carefully:
-            - Do *not* discard any original information unless the user clearly says so.
-            - If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
-            - If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
-            - If user feedback is to add new page and update the page structure, do so without removing existing pages and their content.
-            🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
-            - What the user's feedback was,
-            - What changes you made based on it,
-            - And how those changes respect and enhance the original plan.
-
-            Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
-            Your explanation should flow like human reasoning — not in list format or bullet points.
-            After that, return the revised project plan in the **exact same markdown format** as the original.
-            Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
-            """
-
-                refined_plan_response = planner_model.invoke(refined_plan_prompt)
+                refined_plan_response = planner_model.invoke(
+                    refined_plan_html_prompt.format(
+                        plan=plan, plan_feedback=plan_feedback, html_data=html_data
+                    )
+                )
                 refined_plan = refined_plan_response.content
                 print(f"\n Refined Plan:\n{refined_plan}")
 
@@ -452,7 +410,8 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         report = None
 
     while True:
-        if user_input.lower() not in {"images", "image", "img", "upload", "up"}:
+        escape = {"images", "image", "img", "upload", "up", "talk", "chat"}
+        if user_input.lower() not in escape:
             repo_name = state_manager.get_work_dir()
             server_res_obj = start_server(repo_name)
             server_res = json.dumps(server_res_obj)
@@ -471,14 +430,14 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     "Make sure that a startup.sh file is created and the outgoing port is strictly 9000 if it is exposing 2 ports than serve the build file through the backend itself and then make the backend use 9000 port"
                 )
         else:
-            if user_input.lower() not in {"images", "image", "img", "upload", "up"}:
+            if user_input.lower() not in escape:
                 print_warning("Checking for any errors...")
                 time.sleep(60)
                 link = server_res_obj["link"]
                 code, check_msg = check_website(link, repo_name)
                 time.sleep(5)
                 code, check_msg = check_website(link, repo_name)
-            else :
+            else:
                 code = 0
 
             if code == 1:
@@ -489,7 +448,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     "Fix this error properly and any errors that might propogate due to this error too"
                 )
             else:
-                if user_input.lower() not in {"images", "image", "img", "upload", "up"}:
+                if user_input.lower() not in escape:
                     print_info("There are no errors server-side")
                     print_success(server_res)
                     winsound.Beep(500, 500)  # remove in production
@@ -519,6 +478,10 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     print("Exiting loop.")
                     break
 
+                if user_input.lower() in {"talk", "chat"}:
+                    chat_with_pi()
+                    continue
+
                 if user_input.lower() in {"images", "image", "img"}:
                     images = state_manager.get_assets()
                     if not len(images):
@@ -526,7 +489,7 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     for i in images:
                         print(f"{i['tag']}\t{i['filename']}\t{i['url']}")
                     continue
-                
+
                 if user_input.lower() in {"upload", "up"}:
                     images = upload_images()
                     state_manager.add_assets(images)

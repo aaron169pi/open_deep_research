@@ -8,7 +8,11 @@ import winsound
 from langchain_core.tools import Tool
 from dotenv import load_dotenv
 from tkinter import Tk, filedialog
-
+import json
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain.schema import HumanMessage, AIMessage, SystemMessage
+from state_manager import StateManager
+from prompts import codebase_chat_prompt
 
 load_dotenv()
 
@@ -16,6 +20,7 @@ GITHUB_PAT = os.getenv("GITHUB_PAT")
 GITHUB_USERNAME = os.getenv("GITHUB_USERNAME")
 GITHUB_EMAIL = os.getenv("GITHUB_EMAIL")
 API_URL = os.getenv("API_URL")
+gemini_api_key = os.getenv("GEMINI_API_KEY")
 
 
 def save_files(code_data: str, base_dir: str) -> str:
@@ -144,7 +149,9 @@ def select_images():
 
     file_paths = filedialog.askopenfilenames(
         title="Select image(s) to upload",
-        filetypes=[("Image files", "*.png *.jpg *.jpeg *.ico *.gif *.bmp *.webp *.svg")],
+        filetypes=[
+            ("Image files", "*.png *.jpg *.jpeg *.ico *.gif *.bmp *.webp *.svg")
+        ],
     )
     root.destroy()  # Properly close the Tk instance
     return file_paths
@@ -200,6 +207,53 @@ def stop_server(dir_name: str) -> str:
         return f"Server stopped: {response.json()}"
     except requests.exceptions.RequestException as e:
         return f"Failed to stop server: {e}"
+
+
+def chat_with_pi():
+    state_manager = StateManager()
+
+    code_base = str(state_manager.get_codebase())
+
+    llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        max_tokens=50000,
+    )
+
+    # System context prompt with code base
+    system_prompt = SystemMessage(
+        content=codebase_chat_prompt.format(code_base=code_base)
+    )
+
+    # Load existing chat history (user/AI messages only)
+    print_success("\nThis is your chat with Pi:")
+    chat_history = []
+    raw_history = state_manager.get_chat()
+    for pair in raw_history[-10:]:
+        chat_history.append(HumanMessage(content=pair["user"]))
+        print_warning("\n>>> " + pair["user"])
+        chat_history.append(AIMessage(content=pair["ai"]))
+        print_success("Pi: " + pair["ai"])
+
+    while True:
+        query = input("\n>>> ")
+        if query.lower() in {"exit", "quit"}:
+            break
+
+        chat_history.append(HumanMessage(content=query))
+        messages = [system_prompt] + chat_history
+
+        print("Pi: ", end="", flush=True)
+
+        streamed_response = ""
+        for chunk in llm.stream(messages):
+            print(chunk.content, end="", flush=True)
+            streamed_response += chunk.content
+        print()
+
+        # Save conversation
+        chat_history.append(AIMessage(content=streamed_response))
+        raw_history.append({"user": query, "ai": streamed_response})
+        state_manager.update_chat(raw_history)
 
 
 def init_git_repo() -> str:

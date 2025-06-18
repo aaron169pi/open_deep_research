@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Union
 class StateManager:
     def __init__(self, state_file: str = "state.pkl"):
         self.state_file = state_file
-        self.state = {
+        self.default_state = {
             "plan": "",
             "work_dir": "",
             "codebase": [],
@@ -19,6 +19,7 @@ class StateManager:
             "review_done": False,
             "classification": "",
             "assets": [],
+            "chat": [],
         }
         self.load_state()
 
@@ -39,11 +40,19 @@ class StateManager:
     def load_state(self):
         if os.path.exists(self.state_file):
             with open(self.state_file, "rb") as f:
-                self.state = pickle.load(f)
+                loaded_state = pickle.load(f)
+
+            self.state = {**self.default_state, **loaded_state}
+        else:
+            self.state = self.default_state.copy()
 
     def save_state(self):
         with open(self.state_file, "wb") as f:
             pickle.dump(self.state, f)
+
+    def update_chat(self, chat: List[object]):
+        self.state["chat"] = chat
+        self.save_state()
 
     def update_plan(self, plan: str):
         self.state["plan"] = plan
@@ -91,6 +100,9 @@ class StateManager:
     def add_work_dir(self, work_dir: str):
         self.state["work_dir"] = work_dir
         self.save_state()
+
+    def get_chat(self) -> List[object]:
+        return self.state["chat"]
 
     def get_classification(self) -> str:
         return self.state["classification"]

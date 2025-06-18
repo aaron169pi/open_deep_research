@@ -349,6 +349,10 @@ html_planner_input = """
   ${prompt}
 """
 
+codebase_chat_prompt = """
+You are a senior software engineer. Respond to the users queries in simple Natural Language and do not be verbose. The user is going to ask about this codebase:\n\n{code_base}\n\n
+"""
+
 reviewer_prompt = """
 You are a very keen observer, you have received a codebase and need to review it according to the plan so that all of the features detailed there are applied and so that there are no placeholders and it is actually working fully.
 
@@ -363,15 +367,28 @@ Allow startup.sh to have hardcoded env variables, that is fine for my use case
 
 # Prompt for generating project plans
 planner_prompt = ChatPromptTemplate.from_messages(
-    [("system", PLANNER_PROMPT), ("human", "{idea},Here is application type: {app_type},here is the app type description: {app_type_description}")]
+    [
+        ("system", PLANNER_PROMPT),
+        (
+            "human",
+            "{idea},Here is application type: {app_type},here is the app type description: {app_type_description}",
+        ),
+    ]
 )
 
 html_planner_prompt = ChatPromptTemplate.from_messages(
-  ("human", "{input}\n\nList of pages and features: {plan}")
+    ("human", "{input}\n\nList of pages and features: {plan}")
 )
 
 html_update_planner_prompt = ChatPromptTemplate.from_messages(
-    [("human", "{input}\n\nList of pages and features: {plan}"), ("system", "This is the html i have generated: {html_code} and this is the refined plan i have created: {refined_plan}"), ("human", "{user_suggestion}")]
+    [
+        ("human", "{input}\n\nList of pages and features: {plan}"),
+        (
+            "system",
+            "This is the html i have generated: {html_code} and this is the refined plan i have created: {refined_plan}",
+        ),
+        ("human", "{user_suggestion}"),
+    ]
 )
 
 # Prompt for file structure generation
@@ -501,4 +518,55 @@ Return items key where each item must follow this format:
 - For deleted files, use: "changes": "TERMINATE"
 - Only include directly affected files
 - Do NOT include commentary, markdown, or extra text
+"""
+
+refined_plan_prompt = """
+Here is the original project plan:
+
+{plan}
+The user has provided the following feedback.
+{plan_feedback}
+
+First understand the original plan and make the changes accordingly.
+Your task is to revise the original plan by merging the user's feedback carefully:
+- Do *not* discard any original information unless the user clearly says so.
+- If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
+- If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
+- If user feedback is to add new page and update the page structure, do so without removing existing pages and their content.
+🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
+- What the user's feedback was,
+- What changes you made based on it,
+- And how those changes respect and enhance the original plan.
+
+Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
+Your explanation should flow like human reasoning — not in list format or bullet points.
+After that, return the revised project plan in the **exact same markdown format** as the original.
+Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
+"""
+
+refined_plan_html_prompt = """
+Here is the original project plan:
+
+{plan}
+The user has provided the following feedback.
+{plan_feedback}
+A preview using HTML was also generate and these are the contents for reference
+{html_data}
+If the user's query is purely regarding makes no actual change to the plan then give back the old plan itself
+
+First understand the original plan and make the changes accordingly.
+Your task is to revise the original plan by merging the user's feedback carefully:
+- Do *not* discard any original information unless the user clearly says so.
+- If the user provides a new goal, integrate it into the existing goal rather than replacing it entirely.
+- If a value is given, apply the change additively or descriptively while preserving the structure and content of the original.
+- If user feedback is to add new page and update the page structure, do so without removing existing pages and their content.
+🧠 Always begin your answer with a <thinking> ... </thinking> section. In this section, write a detailed natural-language explanation covering:
+- What the user's feedback was,
+- What changes you made based on it,
+- And how those changes respect and enhance the original plan.
+
+Do not discuss sections where the user said “no changes” — only explain the parts that you actually modified.
+Your explanation should flow like human reasoning — not in list format or bullet points.
+After that, return the revised project plan in the **exact same markdown format** as the original.
+Be concise. Avoid introducing unnecessary tools or complexity unless explicitly requested.
 """
