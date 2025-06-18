@@ -452,9 +452,10 @@ def process_app_idea(idea: str, app_type: str = "auto"):
         report = None
 
     while True:
-        repo_name = state_manager.get_work_dir()
-        server_res_obj = start_server(repo_name)
-        server_res = json.dumps(server_res_obj)
+        if user_input.lower() not in {"images", "image", "img", "upload", "up"}:
+            repo_name = state_manager.get_work_dir()
+            server_res_obj = start_server(repo_name)
+            server_res = json.dumps(server_res_obj)
 
         if "Failed" in server_res or "Error" in server_res or status_code == 1:
             if status_code == 1:
@@ -470,12 +471,15 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     "Make sure that a startup.sh file is created and the outgoing port is strictly 9000 if it is exposing 2 ports than serve the build file through the backend itself and then make the backend use 9000 port"
                 )
         else:
-            print_warning("Checking for any errors...")
-            time.sleep(10)
-            link = server_res_obj["link"]
-            code, check_msg = check_website(link, repo_name)
-            time.sleep(5)
-            code, check_msg = check_website(link, repo_name)
+            if user_input.lower() not in {"images", "image", "img", "upload", "up"}:
+                print_warning("Checking for any errors...")
+                time.sleep(60)
+                link = server_res_obj["link"]
+                code, check_msg = check_website(link, repo_name)
+                time.sleep(5)
+                code, check_msg = check_website(link, repo_name)
+            else :
+                code = 0
 
             if code == 1:
                 print_error(f"This is the server error message: \n\n{check_msg}")
@@ -485,9 +489,10 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     "Fix this error properly and any errors that might propogate due to this error too"
                 )
             else:
-                print_info("There are no errors server-side")
-                print_success(server_res)
-                winsound.Beep(500, 500)  # remove in production
+                if user_input.lower() not in {"images", "image", "img", "upload", "up"}:
+                    print_info("There are no errors server-side")
+                    print_success(server_res)
+                    winsound.Beep(500, 500)  # remove in production
                 user_input = input(
                     "\n>>> Enter additional request for your project (or type 'exit'): "
                 ).strip()
@@ -514,15 +519,17 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     print("Exiting loop.")
                     break
 
-                if user_input.lower() in {"upload", "images", "image", "img"}:
-                    code = int(input(">>> (1) List Images   (2) Upload Images: "))
-                    if code == 1:
-                        images = state_manager.get_assets()
-                        for i in images:
-                            print(f"{i['tag']}\t{i['filename']}\t{i['url']}")
-                    if code == 2:
-                        images = upload_images()
-                        state_manager.add_assets(images)
+                if user_input.lower() in {"images", "image", "img"}:
+                    images = state_manager.get_assets()
+                    if not len(images):
+                        print_info("No images uploaded currently")
+                    for i in images:
+                        print(f"{i['tag']}\t{i['filename']}\t{i['url']}")
+                    continue
+                
+                if user_input.lower() in {"upload", "up"}:
+                    images = upload_images()
+                    state_manager.add_assets(images)
                     continue
 
                 if user_input.lower() in {"restart"}:
@@ -659,7 +666,7 @@ def cleanup():
 
 
 idea = """
-Create a single page website using html, css and js for anything u want, create it fast
+Create a website for a information about linux and its usage. Make sure it looks cool and modern. Include multiple pages about history, difference, etc.
 """
 app_type = ""  # or "modern_web_app", "interactive_data_app"
 process_app_idea(idea, app_type)

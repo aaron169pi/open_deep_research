@@ -144,7 +144,7 @@ def select_images():
 
     file_paths = filedialog.askopenfilenames(
         title="Select image(s) to upload",
-        filetypes=[("Image files", "*.png *.jpg *.jpeg *.ico *.gif *.bmp *.webp")],
+        filetypes=[("Image files", "*.png *.jpg *.jpeg *.ico *.gif *.bmp *.webp *.svg")],
     )
     root.destroy()  # Properly close the Tk instance
     return file_paths
@@ -154,7 +154,7 @@ def upload_images():
     file_paths = select_images()
     if not file_paths:
         print_error("No images selected.")
-        return
+        return []
 
     responses = []
 
