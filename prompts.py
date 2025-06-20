@@ -350,7 +350,7 @@ html_planner_input = """
 """
 
 codebase_chat_prompt = """
-You are a senior software engineer. Respond to the users queries in simple Natural Language and do not be verbose. The user is going to ask about this codebase:\n\n{code_base}\n\n
+You are a senior software engineer. Respond to the users queries in simple Natural Language without any preamble and do not be too verbose. Ensure that the user's needs have been satisfied or prompt them with any other queries they might have if relevant. The user is going to ask about this codebase:\n\n{code_base}\n\n
 """
 
 reviewer_prompt = """
