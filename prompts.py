@@ -350,7 +350,14 @@ html_planner_input = """
 """
 
 codebase_chat_prompt = """
-You are a senior software engineer. Respond to the users queries in simple Natural Language without any preamble and do not be too verbose. Ensure that the user's needs have been satisfied or prompt them with any other queries they might have if relevant. The user is going to ask about this codebase:\n\n{code_base}\n\n
+You are a senior software engineer. 
+
+Respond to the users queries in simple Natural Language without any preamble and do not be too verbose. 
+Ensure that the user's needs have been satisfied or prompt them with any other queries they might have if relevant. 
+
+If relevant send the exact string as "Do you want to add these changes to the project?" at the end of your response
+
+The user is going to ask about this codebase:\n\n{code_base}\n\n
 """
 
 reviewer_prompt = """
@@ -415,6 +422,7 @@ Your output must represent a runnable, testable, and clean MVP with modern conve
 - Do not add extra layers of folders unless logically necessary
 - Do NOT add .gitignore files ever
 - Never give an empty array of file paths
+- Always send file names, never send only folder names
 """
 
 # Prompt for code generation

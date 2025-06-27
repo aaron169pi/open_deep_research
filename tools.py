@@ -211,7 +211,6 @@ def stop_server(dir_name: str) -> str:
 
 def chat_with_pi():
     state_manager = StateManager()
-
     code_base = str(state_manager.get_codebase())
 
     llm = ChatGoogleGenerativeAI(
@@ -219,12 +218,10 @@ def chat_with_pi():
         max_tokens=50000,
     )
 
-    # System context prompt with code base
     system_prompt = SystemMessage(
         content=codebase_chat_prompt.format(code_base=code_base)
     )
 
-    # Load existing chat history (user/AI messages only)
     print_success("\nThis is your chat with Pi:")
     chat_history = []
     raw_history = state_manager.get_chat()
@@ -237,13 +234,12 @@ def chat_with_pi():
     while True:
         query = input("\n>>> ")
         if query.lower() in {"exit", "quit"}:
-            break
+            return ""
 
         chat_history.append(HumanMessage(content=query))
         messages = [system_prompt] + chat_history
 
         print("Pi: ", end="", flush=True)
-
         streamed_response = ""
         for chunk in llm.stream(messages):
             print(chunk.content, end="", flush=True)
@@ -254,6 +250,15 @@ def chat_with_pi():
         chat_history.append(AIMessage(content=streamed_response))
         raw_history.append({"user": query, "ai": streamed_response})
         state_manager.update_chat(raw_history)
+
+        question = "Do you want to add these changes to the project?"
+
+        if question in streamed_response:
+            confirmation = input("\n(yes/no) >>> ")
+            if confirmation in {"yes", "y"}:
+                return query.replace(
+                    question, ""
+                ).strip()  # Return the original query as the actionable request
 
 
 def init_git_repo() -> str:

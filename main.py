@@ -209,7 +209,6 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                         )
                         html_data = preview.content
                         state_manager.update_html(html_data)
-                        print(html_data)
                     else:
                         html_data = state_manager.get_html()
 
@@ -479,8 +478,12 @@ def process_app_idea(idea: str, app_type: str = "auto"):
                     break
 
                 if user_input.lower() in {"talk", "chat"}:
-                    chat_with_pi()
-                    continue
+                    pi_reponse = chat_with_pi()
+
+                    if pi_reponse:
+                        user_input = pi_reponse
+                    else:
+                        continue
 
                 if user_input.lower() in {"images", "image", "img"}:
                     images = state_manager.get_assets()
@@ -629,7 +632,7 @@ def cleanup():
 
 
 idea = """
-Create a website for a information about linux and its usage. Make sure it looks cool and modern. Include multiple pages about history, difference, etc.
+using the model gemini 2.5 flash create a chat that a user can interact with and let them give a system prompt such that the agent always behaves according to that promp and then let the user converse with that chat bot
 """
 app_type = ""  # or "modern_web_app", "interactive_data_app"
 process_app_idea(idea, app_type)
